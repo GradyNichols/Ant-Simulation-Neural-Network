@@ -1,0 +1,709 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phase 1 — Evolutionary Ant Simulator</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #0a0a0f;
+        color: #e0e0e0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+      }
+      h1 {
+        font-size: 1.4rem;
+        font-weight: 400;
+        color: #7dd3fc;
+        margin-bottom: 8px;
+        letter-spacing: 0.5px;
+      }
+      .subtitle {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 16px;
+      }
+      #simCanvas {
+        border: 1px solid #1e293b;
+        border-radius: 8px;
+        background: #0f172a;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+      }
+      .stats {
+        display: flex;
+        gap: 24px;
+        margin-top: 16px;
+        font-size: 0.9rem;
+        color: #94a3b8;
+      }
+      .stat {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .stat-value {
+        color: #7dd3fc;
+        font-weight: 600;
+      }
+      .controls {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      button {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        padding: 8px 18px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+      }
+      button:hover {
+        background: #334155;
+        border-color: #475569;
+      }
+      button.primary {
+        background: #0ea5e9;
+        border-color: #0ea5e9;
+        color: #fff;
+      }
+      button.primary:hover {
+        background: #0284c7;
+      }
+      .legend {
+        margin-top: 12px;
+        font-size: 0.8rem;
+        color: #475569;
+        display: flex;
+        gap: 20px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+      .dot.ant {
+        background: #fbbf24;
+      }
+      .dot.food {
+        background: #4ade80;
+      }
+      .dot.nest {
+        background: #a78bfa;
+      }
+    </style>
+    <base target="_blank" />
+  </head>
+  <body>
+    <h1>🐜 Phase 1 — Evolutionary Ant Simulator</h1>
+    <p class="subtitle">
+      Neural networks from scratch · No libraries · Watch evolution emerge
+    </p>
+
+    <canvas id="simCanvas" width="900" height="650"></canvas>
+
+    <div class="stats">
+      <div class="stat">
+        Generation: <span class="stat-value" id="gen">1</span>
+      </div>
+      <div class="stat">
+        Alive: <span class="stat-value" id="alive">0</span>
+      </div>
+      <div class="stat">
+        Food: <span class="stat-value" id="foodCount">0</span>
+      </div>
+      <div class="stat">
+        Best Fitness: <span class="stat-value" id="bestFit">0</span>
+      </div>
+      <div class="stat">
+        Avg Fitness: <span class="stat-value" id="avgFit">0</span>
+      </div>
+      <div class="stat">Time: <span class="stat-value" id="time">0</span>s</div>
+    </div>
+
+    <div class="controls">
+      <button class="primary" id="btnToggle" onclick="toggleSim()">
+        ⏸ Pause
+      </button>
+      <button onclick="speedUp()">
+        ⚡ Speed ×<span id="speedLabel">1</span>
+      </button>
+      <button onclick="resetSim()">↺ Reset</button>
+      <button onclick="toggleTrails()">
+        👣 Trails: <span id="trailLabel">Off</span>
+      </button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="dot ant"></div>
+        Ant
+      </div>
+      <div class="legend-item">
+        <div class="dot food"></div>
+        Food
+      </div>
+      <div class="legend-item">
+        <div class="dot nest"></div>
+        Nest (spawn)
+      </div>
+    </div>
+
+    <script>
+      // ============================================================
+      // PHASE 1 — EVOLUTIONARY ANT SIMULATOR
+      // Neural network from scratch, no external libraries
+      // ============================================================
+
+      // ---------- CONFIGURATION ----------
+      const CONFIG = {
+        WORLD_W: 900,
+        WORLD_H: 650,
+        POP_SIZE: 60, // Ants per generation
+        FOOD_COUNT: 40, // Food items in world
+        GENERATION_TIME: 600, // Frames per generation (~10s at 60fps)
+
+        // Ant physics
+        ANT_SIZE: 4,
+        ANT_SPEED_MAX: 3,
+        ANT_TURN_MAX: 0.15, // Max radians per frame
+        ENERGY_START: 100,
+        ENERGY_MOVE_COST: 0.15,
+        ENERGY_FOOD_GAIN: 35,
+
+        // Neural network
+        INPUTS: 5, // foodDist, foodAngle, wallDist, energy, noise
+        HIDDEN: 8, // Hidden layer neurons
+        OUTPUTS: 2, // turn, speed
+
+        // Evolution
+        MUTATION_RATE: 0.15, // Probability of mutating a weight
+        MUTATION_STRENGTH: 0.3, // How much a weight can change
+        ELITE_RATIO: 0.2, // Top % that reproduce directly
+      };
+
+      // ---------- UTILITIES ----------
+      const rand = () => Math.random() * 2 - 1; // [-1, 1]
+      const rand01 = () => Math.random(); // [0, 1]
+      const sigmoid = (x) => 1 / (1 + Math.exp(-x));
+      const relu = (x) => Math.max(0, x);
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+      const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+      const normalizeAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a)); // Wrap to [-π, π]
+
+      // ---------- NEURAL NETWORK (from scratch) ----------
+      class NeuralNetwork {
+        constructor(weights = null) {
+          // Weight matrices: input→hidden and hidden→output
+          // Plus bias vectors for each layer
+          this.w1 =
+            weights?.w1 || this._initMatrix(CONFIG.HIDDEN, CONFIG.INPUTS);
+          this.b1 = weights?.b1 || this._initVector(CONFIG.HIDDEN);
+          this.w2 =
+            weights?.w2 || this._initMatrix(CONFIG.OUTPUTS, CONFIG.HIDDEN);
+          this.b2 = weights?.b2 || this._initVector(CONFIG.OUTPUTS);
+        }
+
+        _initMatrix(rows, cols) {
+          // Xavier initialization: weights scaled by sqrt(1/inputs)
+          const scale = Math.sqrt(1 / cols);
+          return Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, () => rand() * scale),
+          );
+        }
+
+        _initVector(size) {
+          return Array.from({ length: size }, () => rand() * 0.1);
+        }
+
+        // Forward pass: inputs → hidden (ReLU) → output (tanh for bounded outputs)
+        forward(inputs) {
+          // Hidden layer: z1 = w1·x + b1, then ReLU
+          const hidden = this.w1.map((row, i) =>
+            relu(
+              row.reduce((sum, w, j) => sum + w * inputs[j], 0) + this.b1[i],
+            ),
+          );
+
+          // Output layer: z2 = w2·hidden + b2, then tanh (outputs in [-1, 1])
+          const outputs = this.w2.map((row, i) =>
+            Math.tanh(
+              row.reduce((sum, w, j) => sum + w * hidden[j], 0) + this.b2[i],
+            ),
+          );
+
+          return outputs; // [turn, speed] both in [-1, 1]
+        }
+
+        // Create a mutated copy of this network
+        mutate() {
+          const mutate = (val) => {
+            if (rand01() < CONFIG.MUTATION_RATE) {
+              return val + rand() * CONFIG.MUTATION_STRENGTH;
+            }
+            return val;
+          };
+
+          return new NeuralNetwork({
+            w1: this.w1.map((row) => row.map(mutate)),
+            b1: this.b1.map(mutate),
+            w2: this.w2.map((row) => row.map(mutate)),
+            b2: this.b2.map(mutate),
+          });
+        }
+
+        // Serialize for inspection/debugging
+        serialize() {
+          return { w1: this.w1, b1: this.b1, w2: this.w2, b2: this.b2 };
+        }
+      }
+
+      // ---------- FOOD ----------
+      class Food {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.radius = 5;
+          this.active = true;
+        }
+
+        static spawnRandom() {
+          const margin = 30;
+          return new Food(
+            margin + rand01() * (CONFIG.WORLD_W - margin * 2),
+            margin + rand01() * (CONFIG.WORLD_H - margin * 2),
+          );
+        }
+      }
+
+      // ---------- ANT ----------
+      class Ant {
+        constructor(nn = null, x = null, y = null) {
+          this.x = x ?? CONFIG.WORLD_W / 2 + (rand01() - 0.5) * 40;
+          this.y = y ?? CONFIG.WORLD_H / 2 + (rand01() - 0.5) * 40;
+          this.angle = rand01() * Math.PI * 2; // Facing direction
+          this.energy = CONFIG.ENERGY_START;
+          this.age = 0;
+          this.alive = true;
+          this.fitness = 0;
+          this.foodEaten = 0;
+
+          this.nn = nn || new NeuralNetwork();
+
+          // Visual trail (for rendering)
+          this.trail = [];
+          this.maxTrail = 30;
+        }
+
+        // Sense environment and return normalized inputs [0..1] or [-1..1]
+        sense(foods) {
+          // 1. Distance to nearest food (normalized 0..1)
+          let nearestFood = null;
+          let minFoodDist = Infinity;
+          for (const f of foods) {
+            if (!f.active) continue;
+            const d = dist(this, f);
+            if (d < minFoodDist) {
+              minFoodDist = d;
+              nearestFood = f;
+            }
+          }
+          const foodDistNorm = nearestFood
+            ? minFoodDist / Math.max(CONFIG.WORLD_W, CONFIG.WORLD_H)
+            : 1;
+
+          // 2. Angle to nearest food relative to ant's heading (-1..1, where 0 = straight ahead)
+          let foodAngleNorm = 0;
+          if (nearestFood) {
+            const angleToFood = Math.atan2(
+              nearestFood.y - this.y,
+              nearestFood.x - this.x,
+            );
+            let relAngle = normalizeAngle(angleToFood - this.angle);
+            foodAngleNorm = relAngle / Math.PI; // [-1, 1]
+          }
+
+          // 3. Distance to nearest wall (normalized 0..1, 0 = touching wall)
+          const distToLeft = this.x;
+          const distToRight = CONFIG.WORLD_W - this.x;
+          const distToTop = this.y;
+          const distToBottom = CONFIG.WORLD_H - this.y;
+          const wallDist = Math.min(
+            distToLeft,
+            distToRight,
+            distToTop,
+            distToBottom,
+          );
+          const wallDistNorm =
+            wallDist / (Math.min(CONFIG.WORLD_W, CONFIG.WORLD_H) / 2);
+
+          // 4. Current energy level (0..1)
+          const energyNorm = this.energy / CONFIG.ENERGY_START;
+
+          // 5. Random noise for exploration (-1..1)
+          const noise = rand();
+
+          return [foodDistNorm, foodAngleNorm, wallDistNorm, energyNorm, noise];
+        }
+
+        // Think and act
+        update(foods) {
+          if (!this.alive) return;
+
+          this.age++;
+
+          // === SENSE ===
+          const inputs = this.sense(foods);
+
+          // === THINK (forward pass through NN) ===
+          const [turnOutput, speedOutput] = this.nn.forward(inputs);
+
+          // === ACT ===
+          // turnOutput ∈ [-1, 1] → turn amount ∈ [-MAX_TURN, MAX_TURN]
+          const turnAmount = turnOutput * CONFIG.ANT_TURN_MAX;
+          this.angle = normalizeAngle(this.angle + turnAmount);
+
+          // speedOutput ∈ [-1, 1] → speed ∈ [0, MAX_SPEED] (clamp negative to 0, no reversing)
+          const speed =
+            Math.max(0, (speedOutput + 1) / 2) * CONFIG.ANT_SPEED_MAX;
+
+          // Move
+          const newX = this.x + Math.cos(this.angle) * speed;
+          const newY = this.y + Math.sin(this.angle) * speed;
+
+          // Wall collision: bounce (lose some energy, reflect angle)
+          if (newX < 0 || newX > CONFIG.WORLD_W) {
+            this.angle = Math.PI - this.angle;
+            this.x = clamp(newX, 0, CONFIG.WORLD_W);
+            this.energy -= 2;
+          } else {
+            this.x = newX;
+          }
+          if (newY < 0 || newY > CONFIG.WORLD_H) {
+            this.angle = -this.angle;
+            this.y = clamp(newY, 0, CONFIG.WORLD_H);
+            this.energy -= 2;
+          } else {
+            this.y = newY;
+          }
+
+          // Energy cost for moving
+          this.energy -=
+            CONFIG.ENERGY_MOVE_COST * (speed / CONFIG.ANT_SPEED_MAX);
+
+          // === EAT ===
+          for (const f of foods) {
+            if (!f.active) continue;
+            if (dist(this, f) < this.constructor.SIZE + f.radius) {
+              f.active = false;
+              this.energy = Math.min(
+                this.energy + CONFIG.ENERGY_FOOD_GAIN,
+                CONFIG.ENERGY_START * 1.5,
+              );
+              this.foodEaten++;
+              this.fitness += 100; // Big bonus for eating
+            }
+          }
+
+          // === FITNESS & DEATH ===
+          // Small reward for surviving (encourages longevity)
+          this.fitness += 0.1;
+
+          if (this.energy <= 0) {
+            this.alive = false;
+            this.energy = 0;
+          }
+
+          // Trail for visualization
+          this.trail.push({ x: this.x, y: this.y });
+          if (this.trail.length > this.maxTrail) this.trail.shift();
+        }
+
+        static get SIZE() {
+          return CONFIG.ANT_SIZE;
+        }
+      }
+
+      // ---------- SIMULATION ENGINE ----------
+      class Simulation {
+        constructor() {
+          this.canvas = document.getElementById("simCanvas");
+          this.ctx = this.canvas.getContext("2d");
+          this.generation = 1;
+          this.frame = 0;
+          this.running = true;
+          this.speedMultiplier = 1;
+          this.showTrails = false;
+          this.bestEverFitness = 0;
+
+          this.ants = [];
+          this.foods = [];
+          this.generationHistory = [];
+
+          this.initGeneration();
+          this.spawnFood();
+
+          this.loop = this.loop.bind(this);
+          requestAnimationFrame(this.loop);
+        }
+
+        initGeneration(parents = null) {
+          this.ants = [];
+          this.frame = 0;
+
+          if (parents === null) {
+            // Generation 1: completely random weights
+            for (let i = 0; i < CONFIG.POP_SIZE; i++) {
+              this.ants.push(new Ant());
+            }
+          } else {
+            // Evolve from parents
+            const eliteCount = Math.max(
+              1,
+              Math.floor(CONFIG.POP_SIZE * CONFIG.ELITE_RATIO),
+            );
+
+            // Sort parents by fitness (descending)
+            const sorted = [...parents].sort((a, b) => b.fitness - a.fitness);
+            const elites = sorted.slice(0, eliteCount);
+
+            // Track best
+            const best = sorted[0];
+            this.bestEverFitness = Math.max(this.bestEverFitness, best.fitness);
+            this.generationHistory.push({
+              gen: this.generation,
+              best: best.fitness,
+              avg: sorted.reduce((s, a) => s + a.fitness, 0) / sorted.length,
+              foodEaten: sorted.reduce((s, a) => s + a.foodEaten, 0),
+            });
+
+            // Create new generation
+            for (let i = 0; i < CONFIG.POP_SIZE; i++) {
+              // Pick a random elite parent (weighted toward better ones would be nice but random is fine for Phase 1)
+              const parent = elites[Math.floor(rand01() * elites.length)];
+              const childNN = parent.nn.mutate();
+              this.ants.push(new Ant(childNN));
+            }
+          }
+
+          this.updateStats();
+        }
+
+        spawnFood() {
+          this.foods = [];
+          for (let i = 0; i < CONFIG.FOOD_COUNT; i++) {
+            this.foods.push(Food.spawnRandom());
+          }
+        }
+
+        update() {
+          // Respawn eaten food occasionally to keep world interesting
+          const activeFood = this.foods.filter((f) => f.active).length;
+          if (activeFood < CONFIG.FOOD_COUNT * 0.3 && rand01() < 0.05) {
+            this.foods.push(Food.spawnRandom());
+          }
+
+          // Update all ants
+          let aliveCount = 0;
+          for (const ant of this.ants) {
+            ant.update(this.foods);
+            if (ant.alive) aliveCount++;
+          }
+
+          this.frame++;
+
+          // Check generation end condition
+          const timeUp = this.frame >= CONFIG.GENERATION_TIME;
+          const allDead = aliveCount === 0;
+
+          if (timeUp || allDead) {
+            this.generation++;
+            this.initGeneration(this.ants);
+            this.spawnFood();
+          }
+
+          this.updateStats();
+        }
+
+        draw() {
+          const ctx = this.ctx;
+
+          // Clear with slight fade for trail effect (optional)
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(0, 0, CONFIG.WORLD_W, CONFIG.WORLD_H);
+
+          // Draw subtle grid
+          ctx.strokeStyle = "#1e293b";
+          ctx.lineWidth = 0.5;
+          for (let x = 0; x < CONFIG.WORLD_W; x += 50) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, CONFIG.WORLD_H);
+            ctx.stroke();
+          }
+          for (let y = 0; y < CONFIG.WORLD_H; y += 50) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(CONFIG.WORLD_W, y);
+            ctx.stroke();
+          }
+
+          // Draw nest (spawn point)
+          ctx.fillStyle = "rgba(167, 139, 250, 0.15)";
+          ctx.beginPath();
+          ctx.arc(CONFIG.WORLD_W / 2, CONFIG.WORLD_H / 2, 25, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(167, 139, 250, 0.3)";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Draw food
+          for (const f of this.foods) {
+            if (!f.active) continue;
+            ctx.fillStyle = "#4ade80";
+            ctx.shadowColor = "#4ade80";
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          }
+
+          // Draw ant trails
+          if (this.showTrails) {
+            for (const ant of this.ants) {
+              if (ant.trail.length < 2) continue;
+              ctx.strokeStyle = `rgba(251, 191, 36, 0.15)`;
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(ant.trail[0].x, ant.trail[0].y);
+              for (let i = 1; i < ant.trail.length; i++) {
+                ctx.lineTo(ant.trail[i].x, ant.trail[i].y);
+              }
+              ctx.stroke();
+            }
+          }
+
+          // Draw ants
+          for (const ant of this.ants) {
+            if (!ant.alive) continue;
+
+            const alpha = ant.energy / CONFIG.ENERGY_START;
+            const color =
+              ant.foodEaten > 0
+                ? `rgba(251, 191, 36, ${0.4 + alpha * 0.6})` // Yellow if ate food
+                : `rgba(148, 163, 184, ${0.3 + alpha * 0.7})`; // Grayish otherwise
+
+            ctx.save();
+            ctx.translate(ant.x, ant.y);
+            ctx.rotate(ant.angle);
+
+            // Body
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(0, 0, CONFIG.ANT_SIZE, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Heading indicator (small line showing direction)
+            ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(CONFIG.ANT_SIZE + 3, 0);
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Energy bar (tiny, above ant)
+            const barW = 10;
+            const barH = 2;
+            ctx.fillStyle = "rgba(255,0,0,0.3)";
+            ctx.fillRect(ant.x - barW / 2, ant.y - 10, barW, barH);
+            ctx.fillStyle = `rgba(${255 * (1 - alpha)}, ${255 * alpha}, 0, 0.7)`;
+            ctx.fillRect(ant.x - barW / 2, ant.y - 10, barW * alpha, barH);
+          }
+        }
+
+        updateStats() {
+          const alive = this.ants.filter((a) => a.alive).length;
+          const foodCount = this.foods.filter((f) => f.active).length;
+          const bestFit = Math.max(
+            ...this.ants.map((a) => a.fitness),
+            0,
+          ).toFixed(1);
+          const avgFit = (
+            this.ants.reduce((s, a) => s + a.fitness, 0) / this.ants.length
+          ).toFixed(1);
+          const time = (this.frame / 60).toFixed(1);
+
+          document.getElementById("gen").textContent = this.generation;
+          document.getElementById("alive").textContent = alive;
+          document.getElementById("foodCount").textContent = foodCount;
+          document.getElementById("bestFit").textContent = bestFit;
+          document.getElementById("avgFit").textContent = avgFit;
+          document.getElementById("time").textContent = time;
+        }
+
+        loop() {
+          if (this.running) {
+            // Run multiple updates per frame if speed multiplier > 1
+            for (let s = 0; s < this.speedMultiplier; s++) {
+              this.update();
+            }
+          }
+          this.draw();
+          requestAnimationFrame(this.loop);
+        }
+      }
+
+      // ---------- GLOBAL CONTROLS ----------
+      let sim = new Simulation();
+
+      function toggleSim() {
+        sim.running = !sim.running;
+        document.getElementById("btnToggle").textContent = sim.running
+          ? "⏸ Pause"
+          : "▶ Resume";
+      }
+
+      function speedUp() {
+        const speeds = [1, 5, 10, 20];
+        const idx = speeds.indexOf(sim.speedMultiplier);
+        sim.speedMultiplier = speeds[(idx + 1) % speeds.length];
+        document.getElementById("speedLabel").textContent = sim.speedMultiplier;
+      }
+
+      function resetSim() {
+        sim = new Simulation();
+        document.getElementById("btnToggle").textContent = "⏸ Pause";
+        document.getElementById("speedLabel").textContent = "1";
+        document.getElementById("trailLabel").textContent = "Off";
+      }
+
+      function toggleTrails() {
+        sim.showTrails = !sim.showTrails;
+        document.getElementById("trailLabel").textContent = sim.showTrails
+          ? "On"
+          : "Off";
+      }
+    </script>
+  </body>
+</html>
