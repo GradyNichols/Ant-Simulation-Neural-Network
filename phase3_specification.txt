@@ -1,0 +1,602 @@
+PHASE 3 — PHEROMONES, COLONIES & ECOSYSTEM DYNAMICS
+Complete Technical Specification
+============================================================
+
+CORE PHILOSOPHY
+---------------
+Phase 3 transitions from discrete generational evolution to continuous
+artificial life. Ants live, die, and reproduce in real-time within a
+persistent ecosystem. There are no "generations" that reset the world.
+Evolution happens continuously as fitter ants reproduce more often,
+passing mutated neural networks to offspring.
+
+THE GOLDEN RULE: No behavior is programmed. The only hardcoded rules
+are physics (movement, collision, energy metabolism) and resource
+economics (food pickup, nest deposit, reproduction cost). Everything
+else — trail following, nest homing, exploration vs. exploitation,
+wall avoidance — must emerge from neural network weights being selected
+by fitness.
+
+============================================================
+1. THE WORLD
+============================================================
+
+Coordinate System
+-----------------
+- Canvas: 900 x 650 pixels
+- Origin (0, 0) at top-left
+- All positions are continuous floats, not grid cells
+
+Entities
+--------
+| Entity     | Count       | Purpose                                      |
+|------------|-------------|----------------------------------------------|
+| Ants       | 15-120      | Autonomous agents with neural network brains |
+| Food       | 0-50        | Energy source, spawns continuously           |
+| Walls      | 11          | Obstacles ants must navigate around          |
+| Nest       | 1           | Central hub — food deposit, reproduction     |
+| Predators  | 0+          | Optional threat, added manually              |
+
+Wall Layout (The "Maze")
+------------------------
+WORLD_W = 900, WORLD_H = 650
+
+Walls:
+- Horizontal bar top:    Wall(350, 250, 200, 20)
+- Horizontal bar bottom: Wall(350, 400, 200, 20)
+- Left vertical:         Wall(250, 300, 20, 150)
+- Right vertical:        Wall(630, 300, 20, 150)
+- Top-left corner:       Wall(80, 80, 100, 100)
+- Top-right corner:      Wall(720, 80, 100, 100)
+- Bottom-left corner:    Wall(80, 470, 100, 100)
+- Bottom-right corner:   Wall(720, 470, 100, 100)
+- Top center block:      Wall(450, 120, 60, 60)
+- Bottom-left block:     Wall(200, 520, 80, 40)
+- Bottom-right block:    Wall(620, 520, 80, 40)
+
+The walls create a central corridor with four corner chambers and side
+pockets. Food spawns randomly but NEVER inside walls. The nest is at
+the center (450, 325).
+
+============================================================
+2. THE ANT: ANATOMY & LIFECYCLE
+============================================================
+
+State Variables
+---------------
+ant = {
+    // Position & Physics
+    x: float,              // Pixel position
+    y: float,
+    angle: float,          // Heading in radians, 0 = right, PI/2 = down
+    energy: float,         // 0-150 (starts at 150)
+    age: int,              // Frames lived
+    alive: bool,
+
+    // Behavior State
+    carryingFood: bool,    // true = yellow glow, returning to nest
+    fitness: float,        // Cumulative score (reproduction priority)
+    foodEaten: int,        // Individual food pickups
+    foodReturned: int,     // Successful nest deposits
+
+    // Neural Network
+    nn: RecurrentNN,       // The brain
+    prevHidden: float[],   // Recurrent memory (stored inside NN)
+
+    // Sensory Cache (for rendering)
+    lastVision: [
+        {food, wall, ant, endX, endY},  // Ray 1 (left)
+        {food, wall, ant, endX, endY},  // Ray 2 (center)
+        {food, wall, ant, endX, endY}   // Ray 3 (right)
+    ]
+}
+
+Lifecycle Loop (per frame)
+--------------------------
+1. AGING
+   energy -= 0.02  (slow aging cost)
+   if age > 2000: die of old age
+
+2. SENSING
+   Cast 3 vision rays -> detect food, walls, other ants
+   Sample pheromone field -> food scent, danger scent
+   Read internal state -> energy level, random noise, memory summary
+
+3. THINKING (Neural Network Forward Pass)
+   inputs = [9 vision values, 2 pheromone values, energy, noise, memory]
+   outputs = nn.forward(inputs) -> [turn, speed, pheromoneDeposit]
+
+4. ACTING
+   turn = turnOutput * 0.18 radians
+   speed = max(0, (speedOutput + 1) / 2) * 3.0 pixels/frame
+   Move forward by speed at new angle
+
+5. COLLISION
+   If hit wall: bounce, lose 4 energy, deposit danger pheromone
+   If hit world boundary: bounce, lose 2 energy
+
+6. PHEROMONE DEPOSIT
+   If pheromoneOutput > 0.3:  deposit food pheromone (cyan)
+   If pheromoneOutput < -0.3: deposit danger pheromone (red)
+   Amount = 80 * |output|
+
+7. EATING
+   If touching food and not carrying: pick it up, gain partial energy
+
+8. NEST RETURN
+   If touching nest and carrying: deposit food, gain energy + fitness,
+   colony food += 30
+
+9. ENERGY COST
+   energy -= 0.12 * (speed / maxSpeed)  // movement cost
+
+10. DEATH CHECK
+    if energy <= 0: die, deposit danger pheromone
+
+============================================================
+3. THE NEURAL NETWORK: RECURRENT ARCHITECTURE
+============================================================
+
+Topology
+--------
+INPUT LAYER (14 neurons)
+- Ray 1 Left (-30 degrees):  [food, wall, ant]
+- Ray 2 Center (0 degrees):  [food, wall, ant]
+- Ray 3 Right (+30 degrees): [food, wall, ant]
+- Food pheromone concentration at current position
+- Danger pheromone concentration at current position
+- Current energy (normalized 0-1)
+- Random noise (-1 to 1)
+- Memory summary (average of previous hidden layer)
+
+HIDDEN LAYER (10 neurons, RECURRENT)
+- Each neuron receives: weighted inputs + weighted previous hidden + bias
+- Activation: ReLU
+- Output saved as "memory" for next frame
+
+OUTPUT LAYER (3 neurons)
+- turn:      tanh -> (-1, 1)  -> scaled to +/-0.18 rad/frame
+- speed:     tanh -> (-1, 1)  -> scaled to 0-3 pixels/frame
+- pheromone: tanh -> (-1, 1)  -> >0.3 = food scent, <-0.3 = danger scent
+
+Weight Matrices
+---------------
+| Matrix | Dimensions | Role                  |
+|--------|------------|-----------------------|
+| w1     | 10 x 14    | Input -> Hidden       |
+| b1     | 10         | Hidden biases         |
+| w_hh   | 10 x 10    | Hidden -> Hidden      |
+|        |            | (recurrent/memory)    |
+| w2     | 3 x 10     | Hidden -> Output      |
+| b2     | 3          | Output biases         |
+
+The Recurrent Mechanism
+-----------------------
+At time t:
+    hidden[t] = ReLU( w1 * inputs[t] + w_hh * hidden[t-1] + b1 )
+
+The magic: hidden[t-1] feeds back into hidden[t]. This gives the ant
+short-term memory. Example: "I saw food to my left 5 frames ago" can
+persist if w_hh weights learned to maintain that signal.
+
+The recurrent weights (w_hh) are evolved, not designed. Evolution
+discovers which hidden neurons should "remember" what. One neuron might
+become a "food-left" flag. Another might track "time since last wall
+collision." The ant doesn't know what its memory means — it just learns
+that certain persistent activation patterns lead to higher fitness.
+
+============================================================
+4. VISION SYSTEM
+============================================================
+
+Ray Casting
+-----------
+Each ant casts 3 rays from its position:
+
+              \   |   /
+               \  |  /     <- 120px range
+                \ | /
+         <------●------>    ant position (facing right)
+                / |                /  |                /   |               -30   0   +30   degrees
+
+For each ray:
+1. Calculate ray endpoint:
+   endX = x + cos(angle + rayAngle) * 120
+   endY = y + sin(angle + rayAngle) * 120
+
+2. Check all food, walls, and other ants
+
+3. For each candidate, compute angle difference between ray direction
+   and direction to candidate
+
+4. If |angleDiff| < PI/10 (18 degrees), candidate is "in" the ray
+
+5. Return the closest match for each type, normalized by distance:
+   detected = 1 - (distance / 120)
+
+Vision Output
+-------------
+ray = {
+    food: 0.0-1.0,    // 1 = food directly ahead, close
+    wall: 0.0-1.0,    // 1 = wall directly ahead, close
+    ant:  0.0-1.0,    // 1 = ant directly ahead, close
+    endX: float,      // For rendering the ray line
+    endY: float
+}
+
+Important: The ant does NOT know which ray detected something. The
+neural network receives 9 raw numbers and must learn that, say,
+input[0] > input[3] means food is more to the left than center. This
+is non-trivial — early generations often have no coherent response to
+vision.
+
+============================================================
+5. PHEROMONE FIELD
+============================================================
+
+Grid Architecture
+-----------------
+Canvas:     900 x 650 pixels
+Grid:       180 x 130 cells
+Cell size:  5 x 5 pixels
+
+Two layers:
+- Layer 0 (Food pheromone): Cyan. Deposited when pheromoneOutput > 0.3
+- Layer 1 (Danger pheromone): Red. Deposited on wall collision, death,
+  or when pheromoneOutput < -0.3
+
+Update Cycle (every frame)
+--------------------------
+For every cell in both layers:
+
+1. DIFFUSION: Each cell averages with its 8 neighbors
+   newValue = oldValue * (1 - 0.12) + (neighborAverage) * 0.12
+
+2. EVAPORATION: All values decay by 0.6% per frame
+   newValue *= 0.994
+
+3. CLAMP: newValue = max(0, newValue)
+
+Why This Works
+--------------
+- Diffusion spreads trails, making them detectable from nearby cells
+- Evaporation prevents permanent trails — old paths fade, requiring
+  reinforcement
+- Reinforcement: Successful paths (ants that find food and return) get
+  walked repeatedly, depositing more pheromone than evaporates ->
+  stable trail
+
+Emergent Trail Formation
+------------------------
+No ant is programmed to "follow trails." But evolution discovers:
+
+1. Ant A wanders randomly, finds food by chance
+2. Ant A returns to nest, depositing food pheromone along the way
+3. Ant B has a mutation where its NN weights connect
+   "high food pheromone on left ray" -> "turn left"
+4. Ant B detects Ant A's trail, follows it, finds food
+5. Ant B has higher fitness (more food returned), reproduces more
+6. The "follow trails" behavior spreads through the population
+
+============================================================
+6. COLONY ECONOMICS
+============================================================
+
+The Nest
+--------
+Position: (450, 325) — center of world
+Radius: 30 pixels
+Start food: 200
+
+Resource Flow
+-------------
+ANT FINDS FOOD (in world)
+    |
+ANT PICKS UP FOOD (carrying = true, energy +15)
+    |
+ANT RETURNS TO NEST (within 30px of center)
+    |
+ANT DEPOSITS FOOD
+    ├── Colony food += 30
+    ├── Ant energy += 40 (refill)
+    ├── Ant fitness += 150 (big reward)
+    └── Ant carrying = false
+
+Reproduction
+------------
+IF colonyFood >= 120 AND population < 120 AND reproCooldown expired:
+    ├── Colony food -= 80 (reproduction cost)
+    ├── Select parent (tournament: pick 3 random alive ants,
+    |   highest fitness wins)
+    ├── Clone parent's NN weights
+    ├── Mutate each weight: 8% chance, +/-0.2 magnitude
+    ├── Reset child's memory (prevHidden = zeros)
+    ├── Spawn child at nest position
+    └── Child starts with 150 energy, 0 fitness, 0 age
+
+Population Dynamics
+-------------------
+The system is self-regulating:
+
+| Scenario                  | Outcome                          |
+|---------------------------|----------------------------------|
+| Many ants, abundant food  | Population grows until scarcity  |
+| Food scarcity             | Energy drops, ants die, repro    |
+|                           | slows                            |
+| Population crash          | Fewer mouths, food accumulates,  |
+|                           | reproduction resumes             |
+| Predator added            | Danger pheromones spread, ants   |
+|                           | avoid areas, some die            |
+
+This creates boom-bust cycles naturally.
+
+============================================================
+7. THE FITNESS FUNCTION
+============================================================
+
+Fitness determines reproduction priority. Accumulated over lifetime:
+
+| Event                | Fitness Change |
+|----------------------|----------------|
+| Survive one frame    | +0.05          |
+| Pick up food         | +50            |
+| Deposit food at nest | +150           |
+
+NO OTHER REWARDS. There is no explicit reward for:
+- Following pheromones
+- Avoiding walls
+- Moving toward food
+- Returning to nest
+
+These must be INDIRECTLY LEARNED because they lead to more food
+pickups and nest deposits.
+
+============================================================
+8. ENVIRONMENTAL SYSTEMS
+============================================================
+
+Seasons
+-------
+Not implemented in Phase 3, but the architecture supports it. The
+Environment class has hooks for:
+- season: affects food spawn rate
+- weather: adds energy costs (storm = +0.03/frame)
+
+Disasters
+---------
+Manual trigger only (button):
+- Random position
+- Radius 80-230 pixels
+- Duration 200-500 frames
+- Types: flood (slow damage), fire (fast damage), drought (slow damage
+  + food destruction)
+
+Affects all ants and food within radius.
+
+============================================================
+9. RENDERING PIPELINE (per frame)
+============================================================
+
+1. CLEAR canvas (dark blue background)
+
+2. IF pheromones visible:
+   Render pheromone grid as low-res overlay
+   (Food = cyan tint, Danger = red tint, very transparent)
+
+3. DRAW grid lines (subtle, for spatial reference)
+
+4. DRAW nest (purple circle, label, food count)
+
+5. DRAW walls (gray rectangles)
+
+6. DRAW food (green circles, pink if moving)
+
+7. DRAW predators (red circles with sense radius)
+
+8. FOR each alive ant:
+   IF vision visible: draw ray lines (faint yellow)
+   IF carrying food: draw slightly larger, brighter yellow
+   Draw body circle (size 4, color by energy)
+   Draw heading line (white, shows facing)
+   Draw energy bar (tiny, above ant)
+
+============================================================
+10. DATA FLOW DIAGRAM
+============================================================
+
+                    WORLD STATE
+    [Ants] [Food] [Walls] [Nest] [Pheromones] [Predators]
+                     |
+        +------------+------------+
+        |            |            |
+        v            v            v
+    Ant 1        Ant 2        Ant N
+    Update       Update       Update
+        |            |            |
+        v            v            v
+    +-----------------------------------------+
+    | SENSE -> Ray cast, pheromone sample,    |
+    |          internal state                   |
+    | THINK -> NN forward pass                |
+    | ACT   -> Move, deposit pheromone, eat,  |
+    |          return                           |
+    | CHECK -> Energy > 0?                    |
+    +-----------------------------------------+
+        |            |            |
+        v            v            v
+    +-----------------------------------------+
+    | COLONY ECONOMICS                        |
+    | IF ant at nest with food ->             |
+    |    colonyFood += 30                     |
+    | IF colonyFood >= 120 -> reproduce       |
+    | IF ant energy <= 0 -> die, deposit      |
+    |    danger pheromone                     |
+    +-----------------------------------------+
+                     |
+                     v
+    +-----------------------------------------+
+    | PHEROMONE UPDATE                        |
+    | Diffuse + evaporate both layers         |
+    +-----------------------------------------+
+                     |
+                     v
+    +-----------------------------------------+
+    | RENDER                                  |
+    | Draw everything to canvas               |
+    +-----------------------------------------+
+
+============================================================
+11. COMMON BUGS & FIXES
+============================================================
+
+Bug: Ants invisible / off-canvas
+--------------------------------
+Cause: NaN in position from NN mismatch or undefined array access
+Fix: Ensure nn.forward() receives exactly nn.nInputs values. Add NaN
+guards: if (isNaN(x)) x = nest.x
+
+Bug: Ants never reproduce
+-------------------------
+Cause: reproThreshold or reproCost too high, or reproTimer never
+increments
+Fix: Check that nest.food decreases on deposit and reproTimer++ runs
+every frame
+
+Bug: Pheromone trails never form
+--------------------------------
+Cause: Pheromone deposit rate too low, or evaporation too fast
+Fix: Check PHER_DEPOSIT (should be ~60-80) and PHER_EVAPORATE
+(should be ~0.992-0.995)
+
+Bug: Ants cluster at nest, never explore
+----------------------------------------
+Cause: NN outputs always near zero (speed ~ 0)
+Fix: Check weight initialization scale. Xavier init:
+scale = sqrt(1 / nInputs). Too small = all zeros. Too large = saturation.
+
+Bug: Ants ignore food completely
+-------------------------------
+Cause: Vision not connected to outputs — weights near zero
+Fix: Normal in early generations. Should improve within 10-20
+reproduction cycles. If not, check that vision inputs are actually
+non-zero when food is present.
+
+============================================================
+12. KEY PARAMETERS TO TUNE
+============================================================
+
+| Parameter          | Default | Effect if Increased              |
+|--------------------|---------|----------------------------------|
+| ENERGY_START       | 150     | Longer lifespan, more exploration|
+| ENERGY_MOVE_COST   | 0.12    | Faster starvation, favors        |
+|                    |         | efficient paths                  |
+| ENERGY_FOOD_GAIN   | 50      | Easier survival, less selective  |
+|                    |         | pressure                         |
+| FOOD_SPAWN_RATE    | 0.03    | More food, population grows      |
+|                    |         | faster                           |
+| PHER_DIFFUSE       | 0.12    | Wider trails, easier to follow   |
+| PHER_EVAPORATE     | 0.994   | Trails last longer, more stable  |
+| MUTATION_RATE      | 0.08    | Faster adaptation, less stability|
+| MUTATION_STRENGTH  | 0.2     | Larger jumps, risk of breaking   |
+|                    |         | good solutions                   |
+| REPRO_COST         | 80      | Slower population growth, more   |
+|                    |         | selective                        |
+| MAX_POPULATION     | 120     | Hard cap, prevents overcrowding  |
+
+============================================================
+13. VERIFICATION CHECKLIST
+============================================================
+
+Immediate (0-10 seconds):
+- 40 ants visible, moving in random directions
+- Food items appear (green dots)
+- Stats panel shows "Alive: 40", "Colony Food: 200"
+
+Short-term (10-60 seconds):
+- Some ants find food, turn yellow (carrying)
+- Some carrying ants reach nest, colony food increases
+- First reproduction occurs (colony food drops by 80, new ant appears)
+
+Medium-term (1-5 minutes):
+- Cyan pheromone trails visible between food clusters and nest
+- Ants show more directed movement (less random wandering)
+- Wall collisions decrease
+- Population stabilizes around 40-80
+
+Long-term (5+ minutes):
+- Distinct "lanes" form — ants follow established trails
+- Some ants may develop "scout" behavior (ignore trails, explore edges)
+- Danger pheromones (red) appear near walls/predators
+- Population oscillates with food availability
+
+============================================================
+14. CONFIGURATION REFERENCE
+============================================================
+
+WORLD_W: 900
+WORLD_H: 650
+
+PHER_GRID_W: 180
+PHER_GRID_H: 130
+PHER_DIFFUSE: 0.12
+PHER_EVAPORATE: 0.994
+PHER_DEPOSIT: 80
+PHER_MAX: 255
+
+NEST_X: 450
+NEST_Y: 325
+NEST_RADIUS: 30
+NEST_START_FOOD: 200
+
+ANT_SIZE: 4
+ANT_SPEED_MAX: 3.0
+ANT_TURN_MAX: 0.18
+ENERGY_START: 150
+ENERGY_MOVE_COST: 0.12
+ENERGY_FOOD_GAIN: 40
+ENERGY_WALL_HIT: 4
+ENERGY_PREDATOR_HIT: 60
+ENERGY_AGE_COST: 0.02
+MAX_AGE: 2000
+
+FOOD_PER_NEST_DEPOSIT: 30
+REPRO_COST: 80
+REPRO_THRESHOLD: 120
+REPRO_COOLDOWN: 30
+MAX_POPULATION: 120
+START_POPULATION: 40
+
+VISION_RANGE: 120
+VISION_FOV: PI / 3  (60 degrees)
+VISION_RAY_ANGLES: [-PI/6, 0, PI/6]  (-30, 0, +30 degrees)
+
+INPUTS: 14  (9 vision + 2 pheromone + energy + noise + memory)
+HIDDEN: 10
+OUTPUTS: 3  (turn, speed, pheromoneDeposit)
+
+MUTATION_RATE: 0.08
+MUTATION_STRENGTH: 0.2
+ELITE_RATIO: 0.15  (not used in continuous reproduction)
+
+FOOD_SPAWN_RATE: 0.03
+FOOD_MAX: 50
+
+PREDATOR_SIZE: 8
+PREDATOR_SPEED: 2.8
+PREDATOR_SENSE_RANGE: 150
+
+============================================================
+15. MATH REFERENCE
+============================================================
+
+rand()    = Math.random() * 2 - 1    // [-1, 1]
+rand01()  = Math.random()             // [0, 1]
+relu(x)   = Math.max(0, x)
+tanh(x)   = (e^x - e^-x) / (e^x + e^-x)
+clamp(v, min, max) = Math.max(min, Math.min(max, v))
+dist(a, b) = sqrt((a.x-b.x)^2 + (a.y-b.y)^2)
+normalizeAngle(a) = atan2(sin(a), cos(a))  // wrap to [-PI, PI]
+
+Weight Initialization (Xavier):
+scale = sqrt(1 / nInputs)
+weight = rand() * scale
