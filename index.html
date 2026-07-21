@@ -1,1103 +1,1364 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Phase 3 — Pheromones, Colonies & Ecosystem Dynamics</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0a0f;
-            color: #e0e0e0;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            padding: 12px;
-        }
-        h1 {
-            font-size: 1.2rem;
-            font-weight: 400;
-            color: #7dd3fc;
-            margin-bottom: 4px;
-            letter-spacing: 0.5px;
-        }
-        .subtitle {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-bottom: 10px;
-        }
-        #simCanvas {
-            border: 1px solid #1e293b;
-            border-radius: 8px;
-            background: #0f172a;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 8px;
-            margin-top: 10px;
-            font-size: 0.78rem;
-            color: #94a3b8;
-            max-width: 900px;
-            width: 100%;
-        }
-        .stat { 
-            background: #1e293b; 
-            padding: 6px 10px; 
-            border-radius: 5px; 
-            text-align: center;
-            border: 1px solid #334155;
-        }
-        .stat-label { font-size: 0.65rem; color: #64748b; text-transform: uppercase; }
-        .stat-value { color: #7dd3fc; font-weight: 600; font-size: 0.9rem; }
-        .controls {
-            margin-top: 10px;
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        button {
-            background: #1e293b;
-            color: #e2e8f0;
-            border: 1px solid #334155;
-            padding: 6px 12px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.75rem;
-            transition: all 0.2s;
-        }
-        button:hover { background: #334155; }
-        button.primary { background: #0ea5e9; border-color: #0ea5e9; color: #fff; }
-        button.active { background: #059669; border-color: #059669; }
-        button.danger { background: #dc2626; border-color: #dc2626; }
-        .legend {
-            margin-top: 8px;
-            font-size: 0.72rem;
-            color: #475569;
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-        .legend-item { display: flex; align-items: center; gap: 4px; }
-        .dot { width: 7px; height: 7px; border-radius: 50%; }
-        .dot.ant { background: #fbbf24; }
-        .dot.food { background: #4ade80; }
-        .dot.wall { background: #64748b; }
-        .dot.nest { background: #a78bfa; }
-        .dot.pher-food { background: #22d3ee; }
-        .dot.pher-danger { background: #f43f5e; }
-        .info {
-            margin-top: 8px;
-            padding: 8px 14px;
-            background: #1e293b;
-            border-radius: 5px;
-            font-size: 0.72rem;
-            color: #94a3b8;
-            max-width: 900px;
-            line-height: 1.5;
-        }
-        .info code {
-            background: #0f172a;
-            padding: 1px 4px;
-            border-radius: 3px;
-            color: #7dd3fc;
-            font-family: 'SF Mono', monospace;
-            font-size: 0.7rem;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #0a0a0f;
+        color: #e0e0e0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100vh;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.2rem;
+        font-weight: 400;
+        color: #7dd3fc;
+        margin-bottom: 4px;
+        letter-spacing: 0.5px;
+      }
+      .subtitle {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-bottom: 10px;
+      }
+      #simCanvas {
+        border: 1px solid #1e293b;
+        border-radius: 8px;
+        background: #0f172a;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 8px;
+        margin-top: 10px;
+        font-size: 0.78rem;
+        color: #94a3b8;
+        max-width: 900px;
+        width: 100%;
+      }
+      .stat {
+        background: #1e293b;
+        padding: 6px 10px;
+        border-radius: 5px;
+        text-align: center;
+        border: 1px solid #334155;
+      }
+      .stat-label {
+        font-size: 0.65rem;
+        color: #64748b;
+        text-transform: uppercase;
+      }
+      .stat-value {
+        color: #7dd3fc;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .controls {
+        margin-top: 10px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      button {
+        background: #1e293b;
+        color: #e2e8f0;
+        border: 1px solid #334155;
+        padding: 6px 12px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+      }
+      button:hover {
+        background: #334155;
+      }
+      button.primary {
+        background: #0ea5e9;
+        border-color: #0ea5e9;
+        color: #fff;
+      }
+      button.active {
+        background: #059669;
+        border-color: #059669;
+      }
+      button.danger {
+        background: #dc2626;
+        border-color: #dc2626;
+      }
+      .legend {
+        margin-top: 8px;
+        font-size: 0.72rem;
+        color: #475569;
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+      }
+      .dot.ant {
+        background: #fbbf24;
+      }
+      .dot.food {
+        background: #4ade80;
+      }
+      .dot.wall {
+        background: #64748b;
+      }
+      .dot.nest {
+        background: #a78bfa;
+      }
+      .dot.pher-food {
+        background: #22d3ee;
+      }
+      .dot.pher-danger {
+        background: #f43f5e;
+      }
+      .info {
+        margin-top: 8px;
+        padding: 8px 14px;
+        background: #1e293b;
+        border-radius: 5px;
+        font-size: 0.72rem;
+        color: #94a3b8;
+        max-width: 900px;
+        line-height: 1.5;
+      }
+      .info code {
+        background: #0f172a;
+        padding: 1px 4px;
+        border-radius: 3px;
+        color: #7dd3fc;
+        font-family: "SF Mono", monospace;
+        font-size: 0.7rem;
+      }
     </style>
-<base target="_blank">
-</head>
-<body>
+    <base target="_blank" />
+  </head>
+  <body>
     <h1>🐜 Phase 3 — Pheromones, Colonies & Ecosystem</h1>
-    <p class="subtitle">Continuous life · Pheromone fields · Nest economics · Emergent cooperation</p>
+    <p class="subtitle">
+      Continuous life · Pheromone fields · Nest economics · Emergent cooperation
+    </p>
 
     <canvas id="simCanvas" width="900" height="650"></canvas>
 
     <div class="stats-grid">
-        <div class="stat"><div class="stat-label">Population</div><div class="stat-value" id="pop">0</div></div>
-        <div class="stat"><div class="stat-label">Colony Food</div><div class="stat-value" id="colonyFood">0</div></div>
-        <div class="stat-label">Time</div><div class="stat-value" id="time">0</div></div>
-        <div class="stat"><div class="stat-label">Best Fit</div><div class="stat-value" id="bestFit">0</div></div>
-        <div class="stat"><div class="stat-label">Avg Fit</div><div class="stat-value" id="avgFit">0</div></div>
-        <div class="stat"><div class="stat-label">Born</div><div class="stat-value" id="born">0</div></div>
-        <div class="stat"><div class="stat-label">Died</div><div class="stat-value" id="died">0</div></div>
-        <div class="stat"><div class="stat-label">Terrain</div><div class="stat-value" id="terrain">Maze</div></div>
+      <div class="stat">
+        <div class="stat-label">Population</div>
+        <div class="stat-value" id="pop">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Colony Food</div>
+        <div class="stat-value" id="colonyFood">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Time</div>
+        <div class="stat-value" id="time">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Best Fit</div>
+        <div class="stat-value" id="bestFit">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Avg Fit</div>
+        <div class="stat-value" id="avgFit">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Born</div>
+        <div class="stat-value" id="born">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Died</div>
+        <div class="stat-value" id="died">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Terrain</div>
+        <div class="stat-value" id="terrain">Maze</div>
+      </div>
     </div>
 
     <div class="controls">
-        <button class="primary" id="btnToggle" onclick="toggleSim()">⏸ Pause</button>
-        <button onclick="speedUp()">⚡ ×<span id="speedLabel">1</span></button>
-        <button onclick="resetSim()">↺ Reset</button>
-        <button id="btnPher" onclick="togglePheromones()">💨 Pheromones: <span id="pherLabel">On</span></button>
-        <button id="btnVision" onclick="toggleVision()">👁 Vision: <span id="visionLabel">Off</span></button>
-        <button onclick="cycleTerrain()">🗺 Terrain</button>
-        <button onclick="addPredator()">🦂 Predator</button>
-        <button onclick="spawnFoodBurst()">🍎 Food Burst</button>
+      <button class="primary" id="btnToggle" onclick="toggleSim()">
+        ⏸ Pause
+      </button>
+      <button onclick="speedUp()">⚡ ×<span id="speedLabel">1</span></button>
+      <button onclick="resetSim()">↺ Reset</button>
+      <button id="btnPher" onclick="togglePheromones()">
+        💨 Pheromones: <span id="pherLabel">On</span>
+      </button>
+      <button id="btnVision" onclick="toggleVision()">
+        👁 Vision: <span id="visionLabel">Off</span>
+      </button>
+      <button onclick="cycleTerrain()">🗺 Terrain</button>
+      <button onclick="addPredator()">🦂 Predator</button>
+      <button onclick="spawnFoodBurst()">🍎 Food Burst</button>
     </div>
 
     <div class="legend">
-        <div class="legend-item"><div class="dot ant"></div> Ant (yellow=carrying)</div>
-        <div class="legend-item"><div class="dot food"></div> Food</div>
-        <div class="legend-item"><div class="dot wall"></div> Wall</div>
-        <div class="legend-item"><div class="dot nest"></div> Nest</div>
-        <div class="legend-item"><div class="dot pher-food"></div> Food pheromone</div>
-        <div class="legend-item"><div class="dot pher-danger"></div> Danger pheromone</div>
+      <div class="legend-item">
+        <div class="dot ant"></div>
+        Ant (yellow=carrying)
+      </div>
+      <div class="legend-item">
+        <div class="dot food"></div>
+        Food
+      </div>
+      <div class="legend-item">
+        <div class="dot wall"></div>
+        Wall
+      </div>
+      <div class="legend-item">
+        <div class="dot nest"></div>
+        Nest
+      </div>
+      <div class="legend-item">
+        <div class="dot pher-food"></div>
+        Food pheromone
+      </div>
+      <div class="legend-item">
+        <div class="dot pher-danger"></div>
+        Danger pheromone
+      </div>
     </div>
 
     <div class="info">
-        <strong>Phase 3 Architecture:</strong> Continuous ecosystem with <code>pheromone fields</code> (food & danger trails that diffuse and evaporate), 
-        a <code>central nest</code> storing colony resources, and <code>continuous reproduction</code> when colony food exceeds thresholds. 
-        Ants have <code>3 vision sensors</code> + <code>pheromone detectors</code> + <code>recurrent memory</code>. 
-        The NN decides: explore, follow trails, return to nest, or flee — all emergent. 
-        <code>14 inputs → 12 hidden (recurrent) → 3 outputs</code> (turn, speed, pheromone deposit).
+      <strong>Phase 3 Architecture:</strong> Continuous ecosystem with
+      <code>pheromone fields</code> (food & danger trails that diffuse and
+      evaporate), a <code>central nest</code> storing colony resources, and
+      <code>continuous reproduction</code> when colony food exceeds thresholds.
+      Ants have <code>3 vision sensors</code> +
+      <code>pheromone detectors</code> + <code>recurrent memory</code>. The NN
+      decides: explore, follow trails, return to nest, or flee — all emergent.
+      <code>14 inputs → 10 hidden (recurrent) → 3 outputs</code> (turn, speed,
+      pheromone deposit).
     </div>
 
-<script>
-// ============================================================
-// PHASE 3 — PHEROMONES, COLONIES & ECOSYSTEM DYNAMICS
-// Continuous life, pheromone fields, nest economics
-// ============================================================
+    <script>
+      // ============================================================
+      // PHASE 3 — PHEROMONES, COLONIES & ECOSYSTEM DYNAMICS
+      // Continuous life, pheromone fields, nest economics
+      // ============================================================
 
-const CONFIG = {
-    WORLD_W: 900,
-    WORLD_H: 650,
+      const CONFIG = {
+        WORLD_W: 900,
+        WORLD_H: 650,
 
-    // Pheromone grid (lower res than canvas for performance)
-    PHER_GRID_W: 180,
-    PHER_GRID_H: 130,
-    PHER_DIFFUSE: 0.15,       // Spread to neighbors per step
-    PHER_EVAPORATE: 0.992,    // Multiply by this each step (0.8% loss)
-    PHER_DEPOSIT: 80,         // Amount deposited
-    PHER_MAX: 255,
+        // Pheromone grid (lower res than canvas for performance)
+        PHER_GRID_W: 180,
+        PHER_GRID_H: 130,
+        PHER_DIFFUSE: 0.12, // Spread to neighbors per step
+        PHER_EVAPORATE: 0.994, // Multiply by this each step (0.6% loss)
+        PHER_DEPOSIT: 80, // Amount deposited
+        PHER_MAX: 255,
 
-    // Nest
-    NEST_X: 450,
-    NEST_Y: 325,
-    NEST_RADIUS: 30,
-    NEST_START_FOOD: 200,
+        // Nest
+        NEST_X: 450,
+        NEST_Y: 325,
+        NEST_RADIUS: 55, // Enlarged from spec's 30 to ease the cold-start
+        // bootstrap: ants still get zero nest-sensing info
+        // and must find their own way back, this just makes
+        // the very first lucky round-trip more attainable
+        // so a pheromone trail has a chance to start forming
+        NEST_START_FOOD: 200,
 
-    // Ant lifecycle
-    ANT_SIZE: 4,
-    ANT_SPEED_MAX: 3,
-    ANT_TURN_MAX: 0.18,
-    ENERGY_START: 150,
-    ENERGY_MOVE_COST: 0.08,
-    ENERGY_FOOD_GAIN: 50,     // Individual energy from eating
-    ENERGY_WALL_HIT: 4,
-    ENERGY_PREDATOR_HIT: 60,
-    ENERGY_AGE_COST: 0.02,    // Slow aging
-    MAX_AGE: 2000,            // Hard lifespan limit
+        // Ant lifecycle
+        ANT_SIZE: 4,
+        ANT_SPEED_MAX: 3,
+        ANT_TURN_MAX: 0.18,
+        ENERGY_START: 150,
+        ENERGY_MOVE_COST: 0.12,
+        ENERGY_FOOD_GAIN: 40, // Individual energy from eating (nest refill)
+        ENERGY_PICKUP_GAIN: 15, // Partial energy gained on pickup
+        ENERGY_WALL_HIT: 4,
+        ENERGY_BOUNDARY_HIT: 2,
+        ENERGY_PREDATOR_HIT: 60,
+        ENERGY_AGE_COST: 0.02, // Slow aging
+        MAX_AGE: 2000, // Hard lifespan limit
 
-    // Colony economics
-    FOOD_PER_NEST_DEPOSIT: 30,   // Food ant brings back to nest
-    REPRO_COST: 80,              // Colony food cost to spawn new ant
-    REPRO_THRESHOLD: 120,        // Min colony food to reproduce
-    REPRO_COOLDOWN: 30,          // Frames between reproduction attempts
-    MAX_POPULATION: 120,
-    START_POPULATION: 40,
+        // Colony economics
+        FOOD_PER_NEST_DEPOSIT: 30, // Food ant brings back to nest
+        REPRO_COST: 80, // Colony food cost to spawn new ant
+        REPRO_THRESHOLD: 120, // Min colony food to reproduce
+        REPRO_COOLDOWN: 30, // Frames between reproduction attempts
+        MAX_POPULATION: 120,
+        START_POPULATION: 40,
 
-    // Vision
-    VISION_RANGE: 120,
-    VISION_RAY_ANGLES: [-Math.PI/6, 0, Math.PI/6],
+        // Vision
+        VISION_RANGE: 120,
+        VISION_RAY_ANGLES: [-Math.PI / 6, 0, Math.PI / 6],
 
-    // NN: 3 rays × 3 types (food,wall,ant) + 2 pheromones + energy + noise + memory = 14
-    INPUTS: 14,
-    HIDDEN: 12,
-    OUTPUTS: 3,              // turn, speed, pheromoneDeposit (0=none, 1=food, -1=danger)
+        // NN: 3 rays × 3 types (food,wall,ant) + 2 pheromones + energy + noise + memory = 14
+        INPUTS: 14,
+        HIDDEN: 10,
+        OUTPUTS: 3, // turn, speed, pheromoneDeposit (0=none, 1=food, -1=danger)
 
-    MUTATION_RATE: 0.1,
-    MUTATION_STRENGTH: 0.2,
+        MUTATION_RATE: 0.08,
+        MUTATION_STRENGTH: 0.2,
 
-    // Food
-    FOOD_SPAWN_RATE: 0.03,    // Chance per frame to spawn new food
-    FOOD_MAX: 50,
+        // Food
+        FOOD_SPAWN_RATE: 0.03, // Chance per frame to spawn new food
+        FOOD_MAX: 50,
 
-    // Predator
-    PREDATOR_SIZE: 8,
-    PREDATOR_SPEED: 2.8,
-    PREDATOR_SENSE_RANGE: 150,
-};
+        // Predator
+        PREDATOR_SIZE: 8,
+        PREDATOR_SPEED: 2.8,
+        PREDATOR_SENSE_RANGE: 150,
+      };
 
-const rand = () => Math.random() * 2 - 1;
-const rand01 = () => Math.random();
-const relu = x => Math.max(0, x);
-const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-const normalizeAngle = a => Math.atan2(Math.sin(a), Math.cos(a));
+      const rand = () => Math.random() * 2 - 1;
+      const rand01 = () => Math.random();
+      const relu = (x) => Math.max(0, x);
+      const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+      const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+      const normalizeAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-function lineRectIntersect(x1, y1, x2, y2, rx, ry, rw, rh) {
-    const left = lineLine(x1,y1,x2,y2,rx,ry,rx,ry+rh);
-    const right = lineLine(x1,y1,x2,y2,rx+rw,ry,rx+rw,ry+rh);
-    const top = lineLine(x1,y1,x2,y2,rx,ry,rx+rw,ry);
-    const bottom = lineLine(x1,y1,x2,y2,rx,ry+rh,rx+rw,ry+rh);
-    const hits = [left, right, top, bottom].filter(h => h !== null);
-    if (hits.length === 0) return null;
-    return hits.reduce((a, b) => a.t < b.t ? a : b);
-}
+      function lineRectIntersect(x1, y1, x2, y2, rx, ry, rw, rh) {
+        const left = lineLine(x1, y1, x2, y2, rx, ry, rx, ry + rh);
+        const right = lineLine(x1, y1, x2, y2, rx + rw, ry, rx + rw, ry + rh);
+        const top = lineLine(x1, y1, x2, y2, rx, ry, rx + rw, ry);
+        const bottom = lineLine(x1, y1, x2, y2, rx, ry + rh, rx + rw, ry + rh);
+        const hits = [left, right, top, bottom].filter((h) => h !== null);
+        if (hits.length === 0) return null;
+        return hits.reduce((a, b) => (a.t < b.t ? a : b));
+      }
 
-function lineLine(x1,y1,x2,y2,x3,y3,x4,y4) {
-    const denom = (x1-x2)*(y3-y4) - (y1-y2)*(x3-x4);
-    if (Math.abs(denom) < 0.0001) return null;
-    const t = ((x1-x3)*(y3-y4) - (y1-y3)*(x3-x4)) / denom;
-    const u = -((x1-x2)*(y1-y3) - (y1-y2)*(x1-x3)) / denom;
-    if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-        return { x: x1 + t*(x2-x1), y: y1 + t*(y2-y1), t: t };
-    }
-    return null;
-}
+      function lineLine(x1, y1, x2, y2, x3, y3, x4, y4) {
+        const denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+        if (Math.abs(denom) < 0.0001) return null;
+        const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+        const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom;
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+          return { x: x1 + t * (x2 - x1), y: y1 + t * (y2 - y1), t: t };
+        }
+        return null;
+      }
 
-// ---------- RECURRENT NEURAL NETWORK ----------
-class RecurrentNN {
-    constructor(weights = null) {
-        const scale_in = Math.sqrt(1 / CONFIG.INPUTS);
-        const scale_hh = Math.sqrt(1 / CONFIG.HIDDEN);
+      // ---------- RECURRENT NEURAL NETWORK ----------
+      class RecurrentNN {
+        constructor(weights = null) {
+          const scale_in = Math.sqrt(1 / CONFIG.INPUTS);
+          const scale_hh = Math.sqrt(1 / CONFIG.HIDDEN);
 
-        this.w1 = weights?.w1 || this._initMatrix(CONFIG.HIDDEN, CONFIG.INPUTS, scale_in);
-        this.b1 = weights?.b1 || this._initVector(CONFIG.HIDDEN, 0.1);
-        this.w_hh = weights?.w_hh || this._initMatrix(CONFIG.HIDDEN, CONFIG.HIDDEN, scale_hh);
-        this.w2 = weights?.w2 || this._initMatrix(CONFIG.OUTPUTS, CONFIG.HIDDEN, scale_hh);
-        this.b2 = weights?.b2 || this._initVector(CONFIG.OUTPUTS, 0.1);
+          this.w1 =
+            weights?.w1 ||
+            this._initMatrix(CONFIG.HIDDEN, CONFIG.INPUTS, scale_in);
+          this.b1 = weights?.b1 || this._initVector(CONFIG.HIDDEN, 0.1);
+          this.w_hh =
+            weights?.w_hh ||
+            this._initMatrix(CONFIG.HIDDEN, CONFIG.HIDDEN, scale_hh);
+          this.w2 =
+            weights?.w2 ||
+            this._initMatrix(CONFIG.OUTPUTS, CONFIG.HIDDEN, scale_hh);
+          this.b2 = weights?.b2 || this._initVector(CONFIG.OUTPUTS, 0.1);
 
-        this.prevHidden = new Array(CONFIG.HIDDEN).fill(0);
-    }
+          this.prevHidden = new Array(CONFIG.HIDDEN).fill(0);
+        }
 
-    _initMatrix(rows, cols, scale) {
-        return Array.from({length: rows}, () => 
-            Array.from({length: cols}, () => rand() * scale)
-        );
-    }
+        _initMatrix(rows, cols, scale) {
+          return Array.from({ length: rows }, () =>
+            Array.from({ length: cols }, () => rand() * scale),
+          );
+        }
 
-    _initVector(size, scale) {
-        return Array.from({length: size}, () => rand() * scale);
-    }
+        _initVector(size, scale) {
+          return Array.from({ length: size }, () => rand() * scale);
+        }
 
-    forward(inputs) {
-        const hidden = this.w1.map((row, i) => {
+        forward(inputs) {
+          const hidden = this.w1.map((row, i) => {
             let sum = row.reduce((s, w, j) => s + w * inputs[j], 0);
-            sum += this.w_hh[i].reduce((s, w, j) => s + w * this.prevHidden[j], 0);
+            sum += this.w_hh[i].reduce(
+              (s, w, j) => s + w * this.prevHidden[j],
+              0,
+            );
             sum += this.b1[i];
             return relu(sum);
-        });
+          });
 
-        this.prevHidden = [...hidden];
+          this.prevHidden = [...hidden];
 
-        const outputs = this.w2.map((row, i) => 
-            Math.tanh(row.reduce((sum, w, j) => sum + w * hidden[j], 0) + this.b2[i])
-        );
+          const outputs = this.w2.map((row, i) =>
+            Math.tanh(
+              row.reduce((sum, w, j) => sum + w * hidden[j], 0) + this.b2[i],
+            ),
+          );
 
-        return outputs;
-    }
+          return outputs;
+        }
 
-    resetMemory() {
-        this.prevHidden = new Array(CONFIG.HIDDEN).fill(0);
-    }
+        resetMemory() {
+          this.prevHidden = new Array(CONFIG.HIDDEN).fill(0);
+        }
 
-    mutate() {
-        const mutate = val => {
+        mutate() {
+          const mutate = (val) => {
             if (rand01() < CONFIG.MUTATION_RATE) {
-                return val + rand() * CONFIG.MUTATION_STRENGTH;
+              return val + rand() * CONFIG.MUTATION_STRENGTH;
             }
             return val;
-        };
+          };
 
-        const child = new RecurrentNN({
-            w1: this.w1.map(row => row.map(mutate)),
+          const child = new RecurrentNN({
+            w1: this.w1.map((row) => row.map(mutate)),
             b1: this.b1.map(mutate),
-            w_hh: this.w_hh.map(row => row.map(mutate)),
-            w2: this.w2.map(row => row.map(mutate)),
+            w_hh: this.w_hh.map((row) => row.map(mutate)),
+            w2: this.w2.map((row) => row.map(mutate)),
             b2: this.b2.map(mutate),
-        });
-        child.resetMemory();
-        return child;
-    }
-}
+          });
+          child.resetMemory();
+          return child;
+        }
+      }
 
-// ---------- PHEROMONE FIELD ----------
-class PheromoneField {
-    constructor() {
-        this.w = CONFIG.PHER_GRID_W;
-        this.h = CONFIG.PHER_GRID_H;
-        this.cellW = CONFIG.WORLD_W / this.w;
-        this.cellH = CONFIG.WORLD_H / this.h;
+      // ---------- PHEROMONE FIELD ----------
+      class PheromoneField {
+        constructor() {
+          this.w = CONFIG.PHER_GRID_W;
+          this.h = CONFIG.PHER_GRID_H;
+          this.cellW = CONFIG.WORLD_W / this.w;
+          this.cellH = CONFIG.WORLD_H / this.h;
 
-        // Two layers: 0 = food pheromone (cyan), 1 = danger pheromone (red)
-        this.grid = [
+          // Two layers: 0 = food pheromone (cyan), 1 = danger pheromone (red)
+          this.grid = [
             new Float32Array(this.w * this.h).fill(0),
-            new Float32Array(this.w * this.h).fill(0)
-        ];
-    }
+            new Float32Array(this.w * this.h).fill(0),
+          ];
+        }
 
-    idx(gx, gy) {
-        return gy * this.w + gx;
-    }
+        idx(gx, gy) {
+          return gy * this.w + gx;
+        }
 
-    worldToGrid(x, y) {
-        return {
+        worldToGrid(x, y) {
+          return {
             gx: clamp(Math.floor(x / this.cellW), 0, this.w - 1),
-            gy: clamp(Math.floor(y / this.cellH), 0, this.h - 1)
-        };
-    }
+            gy: clamp(Math.floor(y / this.cellH), 0, this.h - 1),
+          };
+        }
 
-    deposit(x, y, type, amount) {
-        const {gx, gy} = this.worldToGrid(x, y);
-        const i = this.idx(gx, gy);
-        this.grid[type][i] = Math.min(this.grid[type][i] + amount, CONFIG.PHER_MAX);
-    }
+        deposit(x, y, type, amount) {
+          const { gx, gy } = this.worldToGrid(x, y);
+          const i = this.idx(gx, gy);
+          this.grid[type][i] = Math.min(
+            this.grid[type][i] + amount,
+            CONFIG.PHER_MAX,
+          );
+        }
 
-    // Sample pheromone at a specific world position (for ant sensing)
-    sample(x, y, type) {
-        const {gx, gy} = this.worldToGrid(x, y);
-        return this.grid[type][this.idx(gx, gy)] / CONFIG.PHER_MAX;
-    }
+        // Sample pheromone at a specific world position (for ant sensing)
+        sample(x, y, type) {
+          const { gx, gy } = this.worldToGrid(x, y);
+          return this.grid[type][this.idx(gx, gy)] / CONFIG.PHER_MAX;
+        }
 
-    // Sample in a direction (for vision-like pheromone sensing)
-    sampleDirection(x, y, angle, type, range) {
-        const sx = x + Math.cos(angle) * range;
-        const sy = y + Math.sin(angle) * range;
-        return this.sample(sx, sy, type);
-    }
+        // Sample in a direction (for vision-like pheromone sensing)
+        sampleDirection(x, y, angle, type, range) {
+          const sx = x + Math.cos(angle) * range;
+          const sy = y + Math.sin(angle) * range;
+          return this.sample(sx, sy, type);
+        }
 
-    update() {
-        for (let type = 0; type < 2; type++) {
+        update() {
+          for (let type = 0; type < 2; type++) {
             const g = this.grid[type];
             const newGrid = new Float32Array(g.length);
 
             for (let gy = 0; gy < this.h; gy++) {
-                for (let gx = 0; gx < this.w; gx++) {
-                    const i = this.idx(gx, gy);
-                    let val = g[i];
+              for (let gx = 0; gx < this.w; gx++) {
+                const i = this.idx(gx, gy);
+                let val = g[i];
 
-                    // Diffusion: average with neighbors
-                    let neighbors = 0;
-                    let neighborSum = 0;
-                    for (let dy = -1; dy <= 1; dy++) {
-                        for (let dx = -1; dx <= 1; dx++) {
-                            const nx = gx + dx, ny = gy + dy;
-                            if (nx >= 0 && nx < this.w && ny >= 0 && ny < this.h) {
-                                neighborSum += g[this.idx(nx, ny)];
-                                neighbors++;
-                            }
-                        }
+                // Diffusion: average with neighbors
+                let neighbors = 0;
+                let neighborSum = 0;
+                for (let dy = -1; dy <= 1; dy++) {
+                  for (let dx = -1; dx <= 1; dx++) {
+                    if (dx === 0 && dy === 0) continue; // exclude self, only the 8 neighbors
+                    const nx = gx + dx,
+                      ny = gy + dy;
+                    if (nx >= 0 && nx < this.w && ny >= 0 && ny < this.h) {
+                      neighborSum += g[this.idx(nx, ny)];
+                      neighbors++;
                     }
-                    val = val * (1 - CONFIG.PHER_DIFFUSE) + (neighborSum / neighbors) * CONFIG.PHER_DIFFUSE;
-
-                    // Evaporation
-                    val *= CONFIG.PHER_EVAPORATE;
-
-                    newGrid[i] = Math.max(0, val);
+                  }
                 }
+                val =
+                  val * (1 - CONFIG.PHER_DIFFUSE) +
+                  (neighborSum / neighbors) * CONFIG.PHER_DIFFUSE;
+
+                // Evaporation
+                val *= CONFIG.PHER_EVAPORATE;
+
+                newGrid[i] = Math.max(0, val);
+              }
             }
 
             this.grid[type] = newGrid;
+          }
         }
-    }
-}
+      }
 
-// ---------- WALL ----------
-class Wall {
-    constructor(x, y, w, h) { this.x = x; this.y = y; this.w = w; this.h = h; }
-    contains(px, py) { return px >= this.x && px <= this.x + this.w && py >= this.y && py <= this.y + this.h; }
-    closestPoint(px, py) { return { x: clamp(px, this.x, this.x + this.w), y: clamp(py, this.y, this.y + this.h) }; }
-}
+      // ---------- WALL ----------
+      class Wall {
+        constructor(x, y, w, h) {
+          this.x = x;
+          this.y = y;
+          this.w = w;
+          this.h = h;
+        }
+        contains(px, py) {
+          return (
+            px >= this.x &&
+            px <= this.x + this.w &&
+            py >= this.y &&
+            py <= this.y + this.h
+          );
+        }
+        closestPoint(px, py) {
+          return {
+            x: clamp(px, this.x, this.x + this.w),
+            y: clamp(py, this.y, this.y + this.h),
+          };
+        }
+      }
 
-// ---------- FOOD ----------
-class Food {
-    constructor(x, y, moving = false) {
-        this.x = x; this.y = y;
-        this.radius = 5;
-        this.active = true;
-        this.moving = moving;
-        this.moveAngle = rand01() * Math.PI * 2;
-        this.moveSpeed = moving ? 0.3 : 0;
-    }
+      // ---------- FOOD ----------
+      class Food {
+        constructor(x, y, moving = false) {
+          this.x = x;
+          this.y = y;
+          this.radius = 5;
+          this.active = true;
+          this.moving = moving;
+          this.moveAngle = rand01() * Math.PI * 2;
+          this.moveSpeed = moving ? 0.3 : 0;
+        }
 
-    update() {
-        if (!this.moving) return;
-        this.x += Math.cos(this.moveAngle) * this.moveSpeed;
-        this.y += Math.sin(this.moveAngle) * this.moveSpeed;
+        update() {
+          if (!this.moving) return;
+          this.x += Math.cos(this.moveAngle) * this.moveSpeed;
+          this.y += Math.sin(this.moveAngle) * this.moveSpeed;
 
-        if (this.x < 20 || this.x > CONFIG.WORLD_W - 20) this.moveAngle = Math.PI - this.moveAngle;
-        if (this.y < 20 || this.y > CONFIG.WORLD_H - 20) this.moveAngle = -this.moveAngle;
+          if (this.x < 20 || this.x > CONFIG.WORLD_W - 20)
+            this.moveAngle = Math.PI - this.moveAngle;
+          if (this.y < 20 || this.y > CONFIG.WORLD_H - 20)
+            this.moveAngle = -this.moveAngle;
 
-        this.moveAngle += (rand01() - 0.5) * 0.1;
-    }
+          this.moveAngle += (rand01() - 0.5) * 0.1;
+        }
 
-    static spawnRandom(walls) {
-        const margin = 40;
-        let f, attempts = 0;
-        do {
+        static spawnRandom(walls) {
+          const margin = 40;
+          let f,
+            attempts = 0;
+          do {
             f = new Food(
-                margin + rand01() * (CONFIG.WORLD_W - margin * 2),
-                margin + rand01() * (CONFIG.WORLD_H - margin * 2),
-                rand01() < 0.15  // 15% chance of moving food
+              margin + rand01() * (CONFIG.WORLD_W - margin * 2),
+              margin + rand01() * (CONFIG.WORLD_H - margin * 2),
+              rand01() < 0.15, // 15% chance of moving food
             );
             attempts++;
-        } while (attempts < 50 && walls.some(w => w.contains(f.x, f.y)));
-        return f;
-    }
-}
+          } while (attempts < 50 && walls.some((w) => w.contains(f.x, f.y)));
+          return f;
+        }
+      }
 
-// ---------- PREDATOR ----------
-class Predator {
-    constructor(x, y) {
-        this.x = x || rand01() * CONFIG.WORLD_W;
-        this.y = y || rand01() * CONFIG.WORLD_H;
-        this.angle = rand01() * Math.PI * 2;
-        this.alive = true;
-    }
-
-    update(ants) {
-        // Find nearest ant
-        let nearest = null;
-        let minDist = CONFIG.PREDATOR_SENSE_RANGE;
-        for (const ant of ants) {
-            if (!ant.alive) continue;
-            const d = dist(this, ant);
-            if (d < minDist) { minDist = d; nearest = ant; }
+      // ---------- PREDATOR ----------
+      class Predator {
+        constructor(x, y) {
+          this.x = x || rand01() * CONFIG.WORLD_W;
+          this.y = y || rand01() * CONFIG.WORLD_H;
+          this.angle = rand01() * Math.PI * 2;
+          this.alive = true;
         }
 
-        if (nearest) {
+        update(ants) {
+          // Find nearest ant
+          let nearest = null;
+          let minDist = CONFIG.PREDATOR_SENSE_RANGE;
+          for (const ant of ants) {
+            if (!ant.alive) continue;
+            const d = dist(this, ant);
+            if (d < minDist) {
+              minDist = d;
+              nearest = ant;
+            }
+          }
+
+          if (nearest) {
             // Chase
             const angleTo = Math.atan2(nearest.y - this.y, nearest.x - this.x);
             this.angle = angleTo;
             this.x += Math.cos(this.angle) * CONFIG.PREDATOR_SPEED;
             this.y += Math.sin(this.angle) * CONFIG.PREDATOR_SPEED;
-        } else {
+          } else {
             // Wander
             this.angle += (rand01() - 0.5) * 0.3;
             this.x += Math.cos(this.angle) * CONFIG.PREDATOR_SPEED * 0.5;
             this.y += Math.sin(this.angle) * CONFIG.PREDATOR_SPEED * 0.5;
-        }
+          }
 
-        this.x = clamp(this.x, 0, CONFIG.WORLD_W);
-        this.y = clamp(this.y, 0, CONFIG.WORLD_H);
+          this.x = clamp(this.x, 0, CONFIG.WORLD_W);
+          this.y = clamp(this.y, 0, CONFIG.WORLD_H);
 
-        // Kill ants it touches
-        for (const ant of ants) {
+          // Damage ants it touches
+          for (const ant of ants) {
             if (!ant.alive) continue;
             if (dist(this, ant) < CONFIG.PREDATOR_SIZE + CONFIG.ANT_SIZE) {
-                ant.alive = false;
+              ant.energy -= CONFIG.ENERGY_PREDATOR_HIT;
+              if (ant.energy <= 0) {
                 ant.energy = 0;
+                ant.alive = false;
+              }
             }
+          }
         }
-    }
-}
+      }
 
-// ---------- ANT ----------
-class Ant {
-    constructor(nn = null, x = null, y = null) {
-        this.x = x ?? CONFIG.NEST_X + (rand01() - 0.5) * 20;
-        this.y = y ?? CONFIG.NEST_Y + (rand01() - 0.5) * 20;
-        this.angle = rand01() * Math.PI * 2;
-        this.energy = CONFIG.ENERGY_START;
-        this.age = 0;
-        this.alive = true;
-        this.fitness = 0;
-        this.foodEaten = 0;
-        this.foodReturned = 0;
-        this.wallHits = 0;
-        this.carryingFood = false;
+      // ---------- ANT ----------
+      class Ant {
+        constructor(nn = null, x = null, y = null) {
+          this.x = x ?? CONFIG.NEST_X + (rand01() - 0.5) * 20;
+          this.y = y ?? CONFIG.NEST_Y + (rand01() - 0.5) * 20;
+          this.angle = rand01() * Math.PI * 2;
+          this.energy = CONFIG.ENERGY_START;
+          this.age = 0;
+          this.alive = true;
+          this.fitness = 0;
+          this.foodEaten = 0;
+          this.foodReturned = 0;
+          this.wallHits = 0;
+          this.carryingFood = false;
 
-        this.nn = nn || new RecurrentNN();
-        this.nn.resetMemory();
+          this.nn = nn || new RecurrentNN();
+          this.nn.resetMemory();
 
-        this.trail = [];
-        this.maxTrail = 50;
-        this.lastVision = null;
-    }
+          this.trail = [];
+          this.maxTrail = 50;
+          this.lastVision = null;
+        }
 
-    castVisionRay(rayAngle, foods, walls, otherAnts) {
-        const dir = normalizeAngle(this.angle + rayAngle);
-        const endX = this.x + Math.cos(dir) * CONFIG.VISION_RANGE;
-        const endY = this.y + Math.sin(dir) * CONFIG.VISION_RANGE;
+        castVisionRay(rayAngle, foods, walls, otherAnts) {
+          const dir = normalizeAngle(this.angle + rayAngle);
+          const endX = this.x + Math.cos(dir) * CONFIG.VISION_RANGE;
+          const endY = this.y + Math.sin(dir) * CONFIG.VISION_RANGE;
 
-        let bestFood = { dist: Infinity, detected: 0 };
-        let bestWall = { dist: Infinity, detected: 0 };
-        let bestAnt = { dist: Infinity, detected: 0 };
+          let bestFood = { dist: Infinity, detected: 0 };
+          let bestWall = { dist: Infinity, detected: 0 };
+          let bestAnt = { dist: Infinity, detected: 0 };
 
-        for (const f of foods) {
+          for (const f of foods) {
             if (!f.active) continue;
             const angleToFood = Math.atan2(f.y - this.y, f.x - this.x);
             const angleDiff = Math.abs(normalizeAngle(angleToFood - dir));
-            if (angleDiff > Math.PI / 8) continue;
+            if (angleDiff > Math.PI / 10) continue;
             const d = dist(this, f);
             if (d < CONFIG.VISION_RANGE && d < bestFood.dist) {
-                bestFood = { dist: d, detected: 1 - (d / CONFIG.VISION_RANGE) };
+              bestFood = { dist: d, detected: 1 - d / CONFIG.VISION_RANGE };
             }
-        }
+          }
 
-        for (const w of walls) {
-            const hit = lineRectIntersect(this.x, this.y, endX, endY, w.x, w.y, w.w, w.h);
+          for (const w of walls) {
+            const hit = lineRectIntersect(
+              this.x,
+              this.y,
+              endX,
+              endY,
+              w.x,
+              w.y,
+              w.w,
+              w.h,
+            );
             if (hit) {
-                const d = Math.hypot(hit.x - this.x, hit.y - this.y);
-                if (d < CONFIG.VISION_RANGE && d < bestWall.dist) {
-                    bestWall = { dist: d, detected: 1 - (d / CONFIG.VISION_RANGE) };
-                }
+              const d = Math.hypot(hit.x - this.x, hit.y - this.y);
+              if (d < CONFIG.VISION_RANGE && d < bestWall.dist) {
+                bestWall = { dist: d, detected: 1 - d / CONFIG.VISION_RANGE };
+              }
             }
-        }
+          }
 
-        for (const other of otherAnts) {
+          for (const other of otherAnts) {
             if (other === this || !other.alive) continue;
             const angleToAnt = Math.atan2(other.y - this.y, other.x - this.x);
             const angleDiff = Math.abs(normalizeAngle(angleToAnt - dir));
-            if (angleDiff > Math.PI / 8) continue;
+            if (angleDiff > Math.PI / 10) continue;
             const d = dist(this, other);
             if (d < CONFIG.VISION_RANGE && d < bestAnt.dist) {
-                bestAnt = { dist: d, detected: 1 - (d / CONFIG.VISION_RANGE) };
+              bestAnt = { dist: d, detected: 1 - d / CONFIG.VISION_RANGE };
             }
+          }
+
+          return {
+            food: bestFood.detected,
+            wall: bestWall.detected,
+            ant: bestAnt.detected,
+            endX,
+            endY,
+          };
         }
 
-        return { food: bestFood.detected, wall: bestWall.detected, ant: bestAnt.detected, endX, endY };
-    }
+        sense(foods, walls, otherAnts, pheromones) {
+          const vision = [];
+          const rayData = [];
 
-    sense(foods, walls, otherAnts, pheromones) {
-        const vision = [];
-        const rayData = [];
-
-        for (const rayAngle of CONFIG.VISION_RAY_ANGLES) {
+          for (const rayAngle of CONFIG.VISION_RAY_ANGLES) {
             const ray = this.castVisionRay(rayAngle, foods, walls, otherAnts);
             vision.push(ray.food, ray.wall, ray.ant);
             rayData.push(ray);
+          }
+
+          this.lastVision = rayData;
+
+          // Pheromone sensing at current position
+          const pherFood = pheromones.sample(this.x, this.y, 0);
+          const pherDanger = pheromones.sample(this.x, this.y, 1);
+
+          // Energy
+          const energyNorm = this.energy / CONFIG.ENERGY_START;
+          const noise = rand();
+
+          // Memory summary
+          const memorySummary =
+            this.nn.prevHidden.reduce((a, b) => a + b, 0) / CONFIG.HIDDEN;
+
+          return [
+            ...vision,
+            pherFood,
+            pherDanger,
+            energyNorm,
+            noise,
+            memorySummary,
+          ];
         }
 
-        this.lastVision = rayData;
+        update(foods, walls, otherAnts, pheromones, nest) {
+          if (!this.alive) return;
 
-        // Pheromone sensing at current position
-        const pherFood = pheromones.sample(this.x, this.y, 0);
-        const pherDanger = pheromones.sample(this.x, this.y, 1);
+          this.age++;
 
-        // Energy
-        const energyNorm = this.energy / CONFIG.ENERGY_START;
-        const noise = rand();
-
-        // Memory summary
-        const memorySummary = this.nn.prevHidden.reduce((a, b) => a + b, 0) / CONFIG.HIDDEN;
-
-        return [...vision, pherFood, pherDanger, energyNorm, noise, memorySummary];
-    }
-
-    update(foods, walls, otherAnts, pheromones, nest) {
-        if (!this.alive) return;
-
-        this.age++;
-
-        // Aging
-        this.energy -= CONFIG.ENERGY_AGE_COST;
-        if (this.age > CONFIG.MAX_AGE) {
+          // Aging
+          this.energy -= CONFIG.ENERGY_AGE_COST;
+          if (this.age > CONFIG.MAX_AGE) {
             this.alive = false;
             this.energy = 0;
             return;
-        }
+          }
 
-        // === SENSE ===
-        const inputs = this.sense(foods, walls, otherAnts, pheromones);
+          // === SENSE ===
+          const inputs = this.sense(foods, walls, otherAnts, pheromones);
 
-        // === THINK ===
-        const [turnOutput, speedOutput, pherOutput] = this.nn.forward(inputs);
+          // === THINK ===
+          const [turnOutput, speedOutput, pherOutput] = this.nn.forward(inputs);
 
-        // === ACT ===
-        const turnAmount = turnOutput * CONFIG.ANT_TURN_MAX;
-        this.angle = normalizeAngle(this.angle + turnAmount);
+          // === ACT ===
+          const turnAmount = turnOutput * CONFIG.ANT_TURN_MAX;
+          this.angle = normalizeAngle(this.angle + turnAmount);
 
-        const speed = Math.max(0, (speedOutput + 1) / 2) * CONFIG.ANT_SPEED_MAX;
+          const speed =
+            Math.max(0, (speedOutput + 1) / 2) * CONFIG.ANT_SPEED_MAX;
 
-        const newX = this.x + Math.cos(this.angle) * speed;
-        const newY = this.y + Math.sin(this.angle) * speed;
+          const newX = this.x + Math.cos(this.angle) * speed;
+          const newY = this.y + Math.sin(this.angle) * speed;
 
-        // === COLLISIONS ===
-        let hitWall = false;
+          // === COLLISIONS ===
+          let hitWall = false;
+          let hitBoundary = false;
 
-        // World boundaries
-        if (newX < 0 || newX > CONFIG.WORLD_W || newY < 0 || newY > CONFIG.WORLD_H) {
-            hitWall = true;
+          // World boundaries
+          if (
+            newX < 0 ||
+            newX > CONFIG.WORLD_W ||
+            newY < 0 ||
+            newY > CONFIG.WORLD_H
+          ) {
+            hitBoundary = true;
             this.angle += Math.PI + rand() * 0.5;
             this.x = clamp(newX, 0, CONFIG.WORLD_W);
             this.y = clamp(newY, 0, CONFIG.WORLD_H);
-        }
+          }
 
-        // Walls
-        for (const w of walls) {
+          // Walls
+          for (const w of walls) {
             if (w.contains(newX, newY)) {
-                hitWall = true;
-                this.wallHits++;
-                const closest = w.closestPoint(this.x, this.y);
-                const dx = this.x - closest.x;
-                const dy = this.y - closest.y;
-                if (Math.abs(dx) > Math.abs(dy)) {
-                    this.angle = Math.PI - this.angle;
-                } else {
-                    this.angle = -this.angle;
-                }
-                this.angle += rand() * 0.3;
-                this.x = clamp(this.x, w.x - 5, w.x + w.w + 5);
-                this.y = clamp(this.y, w.y - 5, w.y + w.h + 5);
-                break;
+              hitWall = true;
+              this.wallHits++;
+              const closest = w.closestPoint(this.x, this.y);
+              const dx = this.x - closest.x;
+              const dy = this.y - closest.y;
+              if (Math.abs(dx) > Math.abs(dy)) {
+                this.angle = Math.PI - this.angle;
+              } else {
+                this.angle = -this.angle;
+              }
+              this.angle += rand() * 0.3;
+              this.x = clamp(this.x, w.x - 5, w.x + w.w + 5);
+              this.y = clamp(this.y, w.y - 5, w.y + w.h + 5);
+              break;
             }
-        }
+          }
 
-        if (!hitWall) {
+          if (!hitWall && !hitBoundary) {
             this.x = newX;
             this.y = newY;
-        } else {
+          }
+          if (hitWall) {
             this.energy -= CONFIG.ENERGY_WALL_HIT;
             // Deposit danger pheromone on wall collision
             pheromones.deposit(this.x, this.y, 1, CONFIG.PHER_DEPOSIT * 0.5);
-        }
+          } else if (hitBoundary) {
+            this.energy -= CONFIG.ENERGY_BOUNDARY_HIT;
+          }
 
-        // Energy cost
-        this.energy -= CONFIG.ENERGY_MOVE_COST * (speed / CONFIG.ANT_SPEED_MAX);
+          // Energy cost
+          this.energy -=
+            CONFIG.ENERGY_MOVE_COST * (speed / CONFIG.ANT_SPEED_MAX);
 
-        // === PHEROMONE DEPOSIT ===
-        // pherOutput in [-1, 1]: > 0.3 = food pheromone, < -0.3 = danger pheromone
-        if (pherOutput > 0.3) {
-            pheromones.deposit(this.x, this.y, 0, CONFIG.PHER_DEPOSIT * pherOutput);
-        } else if (pherOutput < -0.3) {
-            pheromones.deposit(this.x, this.y, 1, CONFIG.PHER_DEPOSIT * Math.abs(pherOutput));
-        }
+          // === PHEROMONE DEPOSIT ===
+          // pherOutput in [-1, 1]: > 0.3 = food pheromone, < -0.3 = danger pheromone
+          if (pherOutput > 0.3) {
+            pheromones.deposit(
+              this.x,
+              this.y,
+              0,
+              CONFIG.PHER_DEPOSIT * pherOutput,
+            );
+          } else if (pherOutput < -0.3) {
+            pheromones.deposit(
+              this.x,
+              this.y,
+              1,
+              CONFIG.PHER_DEPOSIT * Math.abs(pherOutput),
+            );
+          }
 
-        // === EAT / COLLECT ===
-        for (const f of foods) {
-            if (!f.active) continue;
-            if (dist(this, f) < CONFIG.ANT_SIZE + f.radius) {
+          // === EAT / COLLECT ===
+          if (!this.carryingFood) {
+            for (const f of foods) {
+              if (!f.active) continue;
+              if (dist(this, f) < CONFIG.ANT_SIZE + f.radius) {
                 f.active = false;
-                if (!this.carryingFood) {
-                    this.carryingFood = true;
-                    this.energy = Math.min(this.energy + CONFIG.ENERGY_FOOD_GAIN * 0.3, CONFIG.ENERGY_START);
-                    this.fitness += 50;
-                }
+                this.carryingFood = true;
+                this.energy = Math.min(
+                  this.energy + CONFIG.ENERGY_PICKUP_GAIN,
+                  CONFIG.ENERGY_START,
+                );
+                this.fitness += 50;
+                break;
+              }
             }
-        }
+          }
 
-        // === NEST RETURN ===
-        const distToNest = dist(this, nest);
-        if (distToNest < CONFIG.NEST_RADIUS && this.carryingFood) {
+          // === NEST RETURN ===
+          const distToNest = dist(this, nest);
+          if (distToNest < CONFIG.NEST_RADIUS && this.carryingFood) {
             this.carryingFood = false;
             this.foodReturned++;
             this.fitness += 150;
-            this.energy = Math.min(this.energy + CONFIG.ENERGY_FOOD_GAIN, CONFIG.ENERGY_START);
+            this.energy = Math.min(
+              this.energy + CONFIG.ENERGY_FOOD_GAIN,
+              CONFIG.ENERGY_START,
+            );
             return { deposit: CONFIG.FOOD_PER_NEST_DEPOSIT };
-        }
+          }
 
-        // === FITNESS ===
-        this.fitness += 0.05;
+          // === FITNESS ===
+          this.fitness += 0.05;
 
-        if (this.energy <= 0) {
+          if (this.energy <= 0) {
             this.alive = false;
             this.energy = 0;
+          }
+
+          // Trail
+          this.trail.push({ x: this.x, y: this.y });
+          if (this.trail.length > this.maxTrail) this.trail.shift();
+
+          return null;
+        }
+      }
+
+      // ---------- SIMULATION ----------
+      class Simulation {
+        constructor() {
+          this.canvas = document.getElementById("simCanvas");
+          this.ctx = this.canvas.getContext("2d");
+          this.frame = 0;
+          this.running = true;
+          this.speedMultiplier = 1;
+          this.showPheromones = true;
+          this.showVision = false;
+          this.terrainIndex = 0;
+
+          this.ants = [];
+          this.foods = [];
+          this.walls = [];
+          this.predators = [];
+          this.pheromones = new PheromoneField();
+          this.nest = {
+            x: CONFIG.NEST_X,
+            y: CONFIG.NEST_Y,
+            radius: CONFIG.NEST_RADIUS,
+          };
+          this.colonyFood = CONFIG.NEST_START_FOOD;
+          this.reproTimer = 0;
+          this.totalBorn = 0;
+          this.totalDied = 0;
+          this.bestEverFitness = 0;
+
+          this.terrains = ["Maze", "Open", "Corridors", "Islands", "Sparse"];
+          this.buildTerrain();
+          this.initPopulation();
+
+          this.loop = this.loop.bind(this);
+          requestAnimationFrame(this.loop);
         }
 
-        // Trail
-        this.trail.push({x: this.x, y: this.y});
-        if (this.trail.length > this.maxTrail) this.trail.shift();
+        buildTerrain() {
+          this.walls = [];
+          const names = this.terrains;
 
-        return null;
-    }
-}
-
-// ---------- SIMULATION ----------
-class Simulation {
-    constructor() {
-        this.canvas = document.getElementById('simCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        this.frame = 0;
-        this.running = true;
-        this.speedMultiplier = 1;
-        this.showPheromones = true;
-        this.showVision = false;
-        this.terrainIndex = 0;
-
-        this.ants = [];
-        this.foods = [];
-        this.walls = [];
-        this.predators = [];
-        this.pheromones = new PheromoneField();
-        this.nest = { x: CONFIG.NEST_X, y: CONFIG.NEST_Y, radius: CONFIG.NEST_RADIUS };
-        this.colonyFood = CONFIG.NEST_START_FOOD;
-        this.reproTimer = 0;
-        this.totalBorn = 0;
-        this.totalDied = 0;
-        this.bestEverFitness = 0;
-
-        this.terrains = ['Maze', 'Open', 'Corridors', 'Islands', 'Sparse'];
-        this.buildTerrain();
-        this.initPopulation();
-
-        this.loop = this.loop.bind(this);
-        requestAnimationFrame(this.loop);
-    }
-
-    buildTerrain() {
-        this.walls = [];
-        const names = this.terrains;
-
-        switch (names[this.terrainIndex]) {
-            case 'Maze':
-                this.walls.push(new Wall(350, 250, 200, 20));
-                this.walls.push(new Wall(350, 400, 200, 20));
-                this.walls.push(new Wall(250, 300, 20, 150));
-                this.walls.push(new Wall(630, 300, 20, 150));
-                this.walls.push(new Wall(80, 80, 100, 100));
-                this.walls.push(new Wall(720, 80, 100, 100));
-                this.walls.push(new Wall(80, 470, 100, 100));
-                this.walls.push(new Wall(720, 470, 100, 100));
-                this.walls.push(new Wall(450, 120, 60, 60));
-                this.walls.push(new Wall(200, 520, 80, 40));
-                this.walls.push(new Wall(620, 520, 80, 40));
-                break;
-            case 'Open':
-                // No walls
-                break;
-            case 'Corridors':
-                for (let y = 80; y < CONFIG.WORLD_H - 80; y += 120) {
-                    this.walls.push(new Wall(200, y, 500, 15));
-                }
-                break;
-            case 'Islands':
-                for (let i = 0; i < 15; i++) {
-                    const x = 100 + rand01() * 700;
-                    const y = 100 + rand01() * 450;
-                    this.walls.push(new Wall(x, y, 40 + rand01() * 80, 40 + rand01() * 80));
-                }
-                break;
-            case 'Sparse':
-                this.walls.push(new Wall(400, 200, 100, 250));
-                this.walls.push(new Wall(200, 100, 500, 20));
-                this.walls.push(new Wall(200, 530, 500, 20));
-                break;
+          switch (names[this.terrainIndex]) {
+            case "Maze":
+              this.walls.push(new Wall(350, 250, 200, 20));
+              this.walls.push(new Wall(350, 400, 200, 20));
+              this.walls.push(new Wall(250, 300, 20, 150));
+              this.walls.push(new Wall(630, 300, 20, 150));
+              this.walls.push(new Wall(80, 80, 100, 100));
+              this.walls.push(new Wall(720, 80, 100, 100));
+              this.walls.push(new Wall(80, 470, 100, 100));
+              this.walls.push(new Wall(720, 470, 100, 100));
+              this.walls.push(new Wall(450, 120, 60, 60));
+              this.walls.push(new Wall(200, 520, 80, 40));
+              this.walls.push(new Wall(620, 520, 80, 40));
+              break;
+            case "Open":
+              // No walls
+              break;
+            case "Corridors":
+              for (let y = 80; y < CONFIG.WORLD_H - 80; y += 120) {
+                this.walls.push(new Wall(200, y, 500, 15));
+              }
+              break;
+            case "Islands":
+              for (let i = 0; i < 15; i++) {
+                const x = 100 + rand01() * 700;
+                const y = 100 + rand01() * 450;
+                this.walls.push(
+                  new Wall(x, y, 40 + rand01() * 80, 40 + rand01() * 80),
+                );
+              }
+              break;
+            case "Sparse":
+              this.walls.push(new Wall(400, 200, 100, 250));
+              this.walls.push(new Wall(200, 100, 500, 20));
+              this.walls.push(new Wall(200, 530, 500, 20));
+              break;
+          }
         }
-    }
 
-    initPopulation() {
-        this.ants = [];
-        for (let i = 0; i < CONFIG.START_POPULATION; i++) {
+        initPopulation() {
+          this.ants = [];
+          for (let i = 0; i < CONFIG.START_POPULATION; i++) {
             this.ants.push(new Ant());
+          }
+          this.totalBorn = CONFIG.START_POPULATION;
         }
-        this.totalBorn = CONFIG.START_POPULATION;
-    }
 
-    spawnFood() {
-        if (this.foods.length < CONFIG.FOOD_MAX && rand01() < CONFIG.FOOD_SPAWN_RATE) {
+        spawnFood() {
+          if (
+            this.foods.length < CONFIG.FOOD_MAX &&
+            rand01() < CONFIG.FOOD_SPAWN_RATE
+          ) {
             this.foods.push(Food.spawnRandom(this.walls));
-        }
-        for (const f of this.foods) f.update();
-        this.foods = this.foods.filter(f => f.active);
-    }
-
-    reproduce() {
-        this.reproTimer++;
-        if (this.reproTimer < CONFIG.REPRO_COOLDOWN) return;
-
-        const aliveAnts = this.ants.filter(a => a.alive);
-        if (aliveAnts.length >= CONFIG.MAX_POPULATION) return;
-        if (this.colonyFood < CONFIG.REPRO_THRESHOLD) return;
-
-        // Select parent weighted by fitness
-        const totalFit = aliveAnts.reduce((s, a) => s + a.fitness, 0);
-        if (totalFit <= 0) return;
-
-        let pick = rand01() * totalFit;
-        let parent = aliveAnts[0];
-        for (const ant of aliveAnts) {
-            pick -= ant.fitness;
-            if (pick <= 0) { parent = ant; break; }
+          }
+          for (const f of this.foods) f.update();
+          this.foods = this.foods.filter((f) => f.active);
         }
 
-        this.colonyFood -= CONFIG.REPRO_COST;
-        const child = new Ant(parent.nn.mutate(), this.nest.x + (rand01()-0.5)*20, this.nest.y + (rand01()-0.5)*20);
-        this.ants.push(child);
-        this.totalBorn++;
-        this.reproTimer = 0;
-    }
+        reproduce() {
+          this.reproTimer++;
+          if (this.reproTimer < CONFIG.REPRO_COOLDOWN) return;
 
-    update() {
-        this.spawnFood();
+          const aliveAnts = this.ants.filter((a) => a.alive);
+          if (aliveAnts.length === 0) return;
+          if (aliveAnts.length >= CONFIG.MAX_POPULATION) return;
+          if (this.colonyFood < CONFIG.REPRO_THRESHOLD) return;
 
-        // Update pheromones
-        this.pheromones.update();
+          // Tournament selection: pick 3 random alive ants, highest fitness wins
+          let parent = aliveAnts[Math.floor(rand01() * aliveAnts.length)];
+          for (let i = 0; i < 2; i++) {
+            const candidate =
+              aliveAnts[Math.floor(rand01() * aliveAnts.length)];
+            if (candidate.fitness > parent.fitness) parent = candidate;
+          }
 
-        // Update predators
-        for (const p of this.predators) p.update(this.ants);
+          this.colonyFood -= CONFIG.REPRO_COST;
+          const child = new Ant(
+            parent.nn.mutate(),
+            this.nest.x + (rand01() - 0.5) * 20,
+            this.nest.y + (rand01() - 0.5) * 20,
+          );
+          this.ants.push(child);
+          this.totalBorn++;
+          this.reproTimer = 0;
+        }
 
-        // Update ants
-        let aliveCount = 0;
-        let bestFit = 0;
-        let totalFit = 0;
+        update() {
+          this.spawnFood();
 
-        for (const ant of this.ants) {
+          // Update pheromones
+          this.pheromones.update();
+
+          // Update predators
+          for (const p of this.predators) p.update(this.ants);
+
+          // Update ants
+          let aliveCount = 0;
+          let bestFit = 0;
+          let totalFit = 0;
+
+          for (const ant of this.ants) {
             if (!ant.alive) continue;
 
-            const others = this.ants.filter(a => a !== ant);
-            const result = ant.update(this.foods, this.walls, others, this.pheromones, this.nest);
+            const others = this.ants.filter((a) => a !== ant);
+            const result = ant.update(
+              this.foods,
+              this.walls,
+              others,
+              this.pheromones,
+              this.nest,
+            );
 
             if (result && result.deposit) {
-                this.colonyFood += result.deposit;
+              this.colonyFood += result.deposit;
             }
 
             if (ant.alive) {
-                aliveCount++;
-                bestFit = Math.max(bestFit, ant.fitness);
-                totalFit += ant.fitness;
+              aliveCount++;
+              bestFit = Math.max(bestFit, ant.fitness);
+              totalFit += ant.fitness;
             } else {
-                this.totalDied++;
-                // Dead ants deposit danger pheromone
-                this.pheromones.deposit(ant.x, ant.y, 1, CONFIG.PHER_DEPOSIT * 0.3);
+              this.totalDied++;
+              // Dead ants deposit danger pheromone
+              this.pheromones.deposit(
+                ant.x,
+                ant.y,
+                1,
+                CONFIG.PHER_DEPOSIT * 0.3,
+              );
             }
-        }
+          }
 
-        this.bestEverFitness = Math.max(this.bestEverFitness, bestFit);
+          this.bestEverFitness = Math.max(this.bestEverFitness, bestFit);
 
-        // Reproduction
-        this.reproduce();
+          // Reproduction
+          this.reproduce();
 
-        // Remove dead ants (keep some for stats, but cap it)
-        this.ants = this.ants.filter(a => a.alive || a.age < 100);
+          // Remove dead ants (keep some for stats, but cap it)
+          this.ants = this.ants.filter((a) => a.alive || a.age < 100);
 
-        // Emergency: if population crashes, spawn random ants
-        if (aliveCount < 3 && this.colonyFood >= CONFIG.REPRO_COST) {
+          // Emergency: if population crashes, spawn a few ants to prevent
+          // total extinction (colony food is capped at 0, never goes negative)
+          if (aliveCount < 3) {
             for (let i = 0; i < 5; i++) {
-                this.colonyFood -= CONFIG.REPRO_COST;
-                this.ants.push(new Ant());
-                this.totalBorn++;
+              this.colonyFood = Math.max(
+                0,
+                this.colonyFood - CONFIG.REPRO_COST,
+              );
+              this.ants.push(new Ant());
+              this.totalBorn++;
             }
+          }
+
+          this.frame++;
+          this.updateStats(aliveCount, bestFit, totalFit);
         }
 
-        this.frame++;
-        this.updateStats(aliveCount, bestFit, totalFit);
-    }
+        draw() {
+          const ctx = this.ctx;
 
-    draw() {
-        const ctx = this.ctx;
+          // Background
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(0, 0, CONFIG.WORLD_W, CONFIG.WORLD_H);
 
-        // Background
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(0, 0, CONFIG.WORLD_W, CONFIG.WORLD_H);
-
-        // Pheromone field (rendered as low-res overlay)
-        if (this.showPheromones) {
+          // Pheromone field (rendered as low-res overlay)
+          if (this.showPheromones) {
             const p = this.pheromones;
             const imgData = ctx.createImageData(p.w, p.h);
             const data = imgData.data;
 
             for (let i = 0; i < p.w * p.h; i++) {
-                const foodPher = p.grid[0][i];
-                const dangerPher = p.grid[1][i];
-                const idx = i * 4;
+              const foodPher = p.grid[0][i];
+              const dangerPher = p.grid[1][i];
+              const idx = i * 4;
 
-                // Food pheromone = cyan tint, Danger = red tint
-                data[idx] = Math.min(255, dangerPher * 1.5);     // R
-                data[idx + 1] = Math.min(255, foodPher * 0.8);   // G
-                data[idx + 2] = Math.min(255, foodPher * 1.2 + dangerPher * 0.3); // B
-                data[idx + 3] = Math.min(60, Math.max(foodPher, dangerPher) * 0.3); // Alpha (subtle)
+              // Food pheromone = cyan tint, Danger = red tint
+              data[idx] = Math.min(255, dangerPher * 1.5); // R
+              data[idx + 1] = Math.min(255, foodPher * 0.8); // G
+              data[idx + 2] = Math.min(255, foodPher * 1.2 + dangerPher * 0.3); // B
+              data[idx + 3] = Math.min(
+                60,
+                Math.max(foodPher, dangerPher) * 0.3,
+              ); // Alpha (subtle)
             }
 
             // Create temp canvas to scale up
-            const tempCanvas = document.createElement('canvas');
+            const tempCanvas = document.createElement("canvas");
             tempCanvas.width = p.w;
             tempCanvas.height = p.h;
-            const tempCtx = tempCanvas.getContext('2d');
+            const tempCtx = tempCanvas.getContext("2d");
             tempCtx.putImageData(imgData, 0, 0);
 
             ctx.imageSmoothingEnabled = true;
             ctx.drawImage(tempCanvas, 0, 0, CONFIG.WORLD_W, CONFIG.WORLD_H);
-        }
+          }
 
-        // Grid
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 0.5;
-        for (let x = 0; x < CONFIG.WORLD_W; x += 50) {
-            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CONFIG.WORLD_H); ctx.stroke();
-        }
-        for (let y = 0; y < CONFIG.WORLD_H; y += 50) {
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CONFIG.WORLD_W, y); ctx.stroke();
-        }
+          // Grid
+          ctx.strokeStyle = "#1e293b";
+          ctx.lineWidth = 0.5;
+          for (let x = 0; x < CONFIG.WORLD_W; x += 50) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, CONFIG.WORLD_H);
+            ctx.stroke();
+          }
+          for (let y = 0; y < CONFIG.WORLD_H; y += 50) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(CONFIG.WORLD_W, y);
+            ctx.stroke();
+          }
 
-        // Nest
-        ctx.fillStyle = 'rgba(167, 139, 250, 0.2)';
-        ctx.beginPath();
-        ctx.arc(this.nest.x, this.nest.y, this.nest.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(167, 139, 250, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        // Nest label
-        ctx.fillStyle = '#a78bfa';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('🏠', this.nest.x, this.nest.y + 5);
+          // Nest
+          ctx.fillStyle = "rgba(167, 139, 250, 0.2)";
+          ctx.beginPath();
+          ctx.arc(this.nest.x, this.nest.y, this.nest.radius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(167, 139, 250, 0.5)";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          // Nest label
+          ctx.fillStyle = "#a78bfa";
+          ctx.font = "12px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("🏠", this.nest.x, this.nest.y + 5);
 
-        // Walls
-        for (const w of this.walls) {
-            ctx.fillStyle = '#334155';
+          // Walls
+          for (const w of this.walls) {
+            ctx.fillStyle = "#334155";
             ctx.fillRect(w.x, w.y, w.w, w.h);
-            ctx.strokeStyle = '#475569';
+            ctx.strokeStyle = "#475569";
             ctx.lineWidth = 1;
             ctx.strokeRect(w.x, w.y, w.w, w.h);
-        }
+          }
 
-        // Food
-        for (const f of this.foods) {
+          // Food
+          for (const f of this.foods) {
             if (!f.active) continue;
-            ctx.fillStyle = f.moving ? '#f472b6' : '#4ade80';
-            ctx.shadowColor = f.moving ? '#f472b6' : '#4ade80';
+            ctx.fillStyle = f.moving ? "#f472b6" : "#4ade80";
+            ctx.shadowColor = f.moving ? "#f472b6" : "#4ade80";
             ctx.shadowBlur = 8;
             ctx.beginPath();
             ctx.arc(f.x, f.y, f.radius, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
-        }
+          }
 
-        // Predators
-        for (const p of this.predators) {
-            ctx.fillStyle = '#f43f5e';
-            ctx.shadowColor = '#f43f5e';
+          // Predators
+          for (const p of this.predators) {
+            ctx.fillStyle = "#f43f5e";
+            ctx.shadowColor = "#f43f5e";
             ctx.shadowBlur = 12;
             ctx.beginPath();
             ctx.arc(p.x, p.y, CONFIG.PREDATOR_SIZE, 0, Math.PI * 2);
             ctx.fill();
             ctx.shadowBlur = 0;
             // Sense radius
-            ctx.strokeStyle = 'rgba(244, 63, 94, 0.1)';
+            ctx.strokeStyle = "rgba(244, 63, 94, 0.1)";
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(p.x, p.y, CONFIG.PREDATOR_SENSE_RANGE, 0, Math.PI * 2);
             ctx.stroke();
-        }
+          }
 
-        // Ants
-        for (const ant of this.ants) {
+          // Ants
+          for (const ant of this.ants) {
             if (!ant.alive) continue;
 
             // Vision
             if (this.showVision && ant.lastVision) {
-                for (let i = 0; i < 3; i++) {
-                    const ray = ant.lastVision[i];
-                    const intensity = Math.max(ray.food, ray.wall, ray.ant);
-                    if (intensity > 0.01) {
-                        ctx.strokeStyle = `rgba(251, 191, 36, ${intensity * 0.3})`;
-                        ctx.lineWidth = 1;
-                        ctx.beginPath();
-                        ctx.moveTo(ant.x, ant.y);
-                        ctx.lineTo(ray.endX, ray.endY);
-                        ctx.stroke();
-                    }
+              for (let i = 0; i < 3; i++) {
+                const ray = ant.lastVision[i];
+                const intensity = Math.max(ray.food, ray.wall, ray.ant);
+                if (intensity > 0.01) {
+                  ctx.strokeStyle = `rgba(251, 191, 36, ${intensity * 0.3})`;
+                  ctx.lineWidth = 1;
+                  ctx.beginPath();
+                  ctx.moveTo(ant.x, ant.y);
+                  ctx.lineTo(ray.endX, ray.endY);
+                  ctx.stroke();
                 }
+              }
             }
 
             // Body
             const alpha = ant.energy / CONFIG.ENERGY_START;
             if (ant.carryingFood) {
-                ctx.fillStyle = `rgba(251, 191, 36, ${0.5 + alpha * 0.5})`;
-                ctx.strokeStyle = '#fbbf24';
-                ctx.lineWidth = 2;
+              ctx.fillStyle = `rgba(251, 191, 36, ${0.5 + alpha * 0.5})`;
+              ctx.strokeStyle = "#fbbf24";
+              ctx.lineWidth = 2;
             } else {
-                const gray = 120 + Math.floor(alpha * 80);
-                ctx.fillStyle = `rgba(${gray}, ${gray + 20}, ${gray + 40}, 0.8)`;
-                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-                ctx.lineWidth = 1;
+              const gray = 120 + Math.floor(alpha * 80);
+              ctx.fillStyle = `rgba(${gray}, ${gray + 20}, ${gray + 40}, 0.8)`;
+              ctx.strokeStyle = "rgba(255,255,255,0.3)";
+              ctx.lineWidth = 1;
             }
 
             ctx.beginPath();
-            ctx.arc(ant.x, ant.y, CONFIG.ANT_SIZE + (ant.carryingFood ? 2 : 0), 0, Math.PI * 2);
+            ctx.arc(
+              ant.x,
+              ant.y,
+              CONFIG.ANT_SIZE + (ant.carryingFood ? 2 : 0),
+              0,
+              Math.PI * 2,
+            );
             ctx.fill();
             ctx.stroke();
 
             // Heading
-            ctx.strokeStyle = ant.carryingFood ? 'rgba(251,191,36,0.9)' : `rgba(255,255,255,${alpha * 0.6})`;
+            ctx.strokeStyle = ant.carryingFood
+              ? "rgba(251,191,36,0.9)"
+              : `rgba(255,255,255,${alpha * 0.6})`;
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             ctx.moveTo(ant.x, ant.y);
-            ctx.lineTo(ant.x + Math.cos(ant.angle) * (CONFIG.ANT_SIZE + 4), 
-                       ant.y + Math.sin(ant.angle) * (CONFIG.ANT_SIZE + 4));
+            ctx.lineTo(
+              ant.x + Math.cos(ant.angle) * (CONFIG.ANT_SIZE + 4),
+              ant.y + Math.sin(ant.angle) * (CONFIG.ANT_SIZE + 4),
+            );
             ctx.stroke();
 
             // Energy bar
             const barW = 10;
             const barH = 2;
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fillRect(ant.x - barW/2, ant.y - 10, barW, barH);
-            ctx.fillStyle = `rgba(${255 * (1-alpha)}, ${255 * alpha}, 0, 0.6)`;
-            ctx.fillRect(ant.x - barW/2, ant.y - 10, barW * alpha, barH);
+            ctx.fillStyle = "rgba(0,0,0,0.3)";
+            ctx.fillRect(ant.x - barW / 2, ant.y - 10, barW, barH);
+            ctx.fillStyle = `rgba(${255 * (1 - alpha)}, ${255 * alpha}, 0, 0.6)`;
+            ctx.fillRect(ant.x - barW / 2, ant.y - 10, barW * alpha, barH);
+          }
         }
-    }
 
-    updateStats(alive, best, total) {
-        document.getElementById('pop').textContent = alive;
-        document.getElementById('colonyFood').textContent = Math.floor(this.colonyFood);
-        document.getElementById('time').textContent = Math.floor(this.frame / 60);
-        document.getElementById('bestFit').textContent = best.toFixed(0);
-        document.getElementById('avgFit').textContent = alive > 0 ? (total / alive).toFixed(0) : '0';
-        document.getElementById('born').textContent = this.totalBorn;
-        document.getElementById('died').textContent = this.totalDied;
-        document.getElementById('terrain').textContent = this.terrains[this.terrainIndex];
-    }
+        updateStats(alive, best, total) {
+          document.getElementById("pop").textContent = alive;
+          document.getElementById("colonyFood").textContent = Math.floor(
+            this.colonyFood,
+          );
+          document.getElementById("time").textContent = Math.floor(
+            this.frame / 60,
+          );
+          document.getElementById("bestFit").textContent = best.toFixed(0);
+          document.getElementById("avgFit").textContent =
+            alive > 0 ? (total / alive).toFixed(0) : "0";
+          document.getElementById("born").textContent = this.totalBorn;
+          document.getElementById("died").textContent = this.totalDied;
+          document.getElementById("terrain").textContent =
+            this.terrains[this.terrainIndex];
+        }
 
-    loop() {
-        if (this.running) {
+        loop() {
+          if (this.running) {
             for (let s = 0; s < this.speedMultiplier; s++) {
-                this.update();
+              this.update();
             }
+          }
+          this.draw();
+          requestAnimationFrame(this.loop);
         }
-        this.draw();
-        requestAnimationFrame(this.loop);
-    }
-}
+      }
 
-// ---------- CONTROLS ----------
-let sim = new Simulation();
+      // ---------- CONTROLS ----------
+      let sim = new Simulation();
 
-function toggleSim() {
-    sim.running = !sim.running;
-    document.getElementById('btnToggle').textContent = sim.running ? '⏸ Pause' : '▶ Resume';
-}
+      function toggleSim() {
+        sim.running = !sim.running;
+        document.getElementById("btnToggle").textContent = sim.running
+          ? "⏸ Pause"
+          : "▶ Resume";
+      }
 
-function speedUp() {
-    const speeds = [1, 5, 10, 20];
-    const idx = speeds.indexOf(sim.speedMultiplier);
-    sim.speedMultiplier = speeds[(idx + 1) % speeds.length];
-    document.getElementById('speedLabel').textContent = sim.speedMultiplier;
-}
+      function speedUp() {
+        const speeds = [1, 5, 10, 20];
+        const idx = speeds.indexOf(sim.speedMultiplier);
+        sim.speedMultiplier = speeds[(idx + 1) % speeds.length];
+        document.getElementById("speedLabel").textContent = sim.speedMultiplier;
+      }
 
-function resetSim() {
-    sim = new Simulation();
-    document.getElementById('btnToggle').textContent = '⏸ Pause';
-    document.getElementById('speedLabel').textContent = '1';
-    document.getElementById('pherLabel').textContent = 'On';
-    document.getElementById('visionLabel').textContent = 'Off';
-}
+      function resetSim() {
+        sim = new Simulation();
+        document.getElementById("btnToggle").textContent = "⏸ Pause";
+        document.getElementById("speedLabel").textContent = "1";
+        document.getElementById("pherLabel").textContent = "On";
+        document.getElementById("visionLabel").textContent = "Off";
+      }
 
-function togglePheromones() {
-    sim.showPheromones = !sim.showPheromones;
-    document.getElementById('pherLabel').textContent = sim.showPheromones ? 'On' : 'Off';
-    document.getElementById('btnPher').classList.toggle('active', sim.showPheromones);
-}
+      function togglePheromones() {
+        sim.showPheromones = !sim.showPheromones;
+        document.getElementById("pherLabel").textContent = sim.showPheromones
+          ? "On"
+          : "Off";
+        document
+          .getElementById("btnPher")
+          .classList.toggle("active", sim.showPheromones);
+      }
 
-function toggleVision() {
-    sim.showVision = !sim.showVision;
-    document.getElementById('visionLabel').textContent = sim.showVision ? 'On' : 'Off';
-    document.getElementById('btnVision').classList.toggle('active', sim.showVision);
-}
+      function toggleVision() {
+        sim.showVision = !sim.showVision;
+        document.getElementById("visionLabel").textContent = sim.showVision
+          ? "On"
+          : "Off";
+        document
+          .getElementById("btnVision")
+          .classList.toggle("active", sim.showVision);
+      }
 
-function cycleTerrain() {
-    sim.terrainIndex = (sim.terrainIndex + 1) % sim.terrains.length;
-    sim.buildTerrain();
-    sim.spawnFood();
-    // Don't reset population, just change the world
-}
+      function cycleTerrain() {
+        sim.terrainIndex = (sim.terrainIndex + 1) % sim.terrains.length;
+        sim.buildTerrain();
+        sim.spawnFood();
+        // Don't reset population, just change the world
+      }
 
-function addPredator() {
-    sim.predators.push(new Predator());
-}
+      function addPredator() {
+        sim.predators.push(new Predator());
+      }
 
-function spawnFoodBurst() {
-    for (let i = 0; i < 10; i++) {
-        sim.foods.push(Food.spawnRandom(sim.walls));
-    }
-}
-</script>
-</body>
+      function spawnFoodBurst() {
+        for (let i = 0; i < 10; i++) {
+          sim.foods.push(Food.spawnRandom(sim.walls));
+        }
+      }
+    </script>
+  </body>
 </html>
