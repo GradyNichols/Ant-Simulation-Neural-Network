@@ -251,7 +251,7 @@
       Ants have <code>3 vision sensors</code> +
       <code>pheromone detectors</code> + <code>recurrent memory</code>. The NN
       decides: explore, follow trails, return to nest, or flee — all emergent.
-      <code>14 inputs → 10 hidden (recurrent) → 3 outputs</code> (turn, speed,
+      <code>18 inputs → 10 hidden (recurrent) → 3 outputs</code> (turn, speed,
       pheromone deposit).
     </div>
 
@@ -299,8 +299,8 @@
 
         // Colony economics
         FOOD_PER_NEST_DEPOSIT: 30, // Food ant brings back to nest
-        REPRO_COST: 50, // Colony food cost to spawn new ant (eased from spec's 80 to help small populations recover)
-        REPRO_THRESHOLD: 60, // Min colony food to reproduce (eased from spec's 120 to help small populations recover)
+        REPRO_COST: 30, // Colony food cost to spawn new ant (eased from spec's 80 to help small populations recover)
+        REPRO_THRESHOLD: 40, // Min colony food to reproduce (eased from spec's 120 to help small populations recover)
         REPRO_COOLDOWN: 30, // Frames between reproduction attempts
         MAX_POPULATION: 120,
         START_POPULATION: 40,
@@ -309,9 +309,11 @@
         VISION_RANGE: 120,
         VISION_RAY_ANGLES: [-Math.PI / 6, 0, Math.PI / 6],
 
-        // NN: 3 rays × 3 types (food,wall,ant) + 2 pheromones + energy + noise + memory = 14
-        INPUTS: 14,
+        // NN: 3 rays × 3 types (food,wall,ant) + 3 directional food-pheromone rays
+        // + 3 directional danger-pheromone rays + energy + noise + memory = 18
+        INPUTS: 18,
         HIDDEN: 10,
+        PHER_SENSE_RANGE: 30, // How far ahead each pheromone "sniff" ray reaches
         OUTPUTS: 3, // turn, speed, pheromoneDeposit (0=none, 1=food, -1=danger)
 
         MUTATION_RATE: 0.08,
@@ -731,9 +733,33 @@
 
           this.lastVision = rayData;
 
-          // Pheromone sensing at current position
-          const pherFood = pheromones.sample(this.x, this.y, 0);
-          const pherDanger = pheromones.sample(this.x, this.y, 1);
+          // Directional pheromone sensing (mirrors vision: left/center/right).
+          // Gives the NN an actual spatial gradient to steer by, instead of a
+          // single same-position scalar it would have to infer a gradient
+          // from purely via recurrent memory.
+          const pherFood = [];
+          const pherDanger = [];
+          for (const rayAngle of CONFIG.VISION_RAY_ANGLES) {
+            const dir = normalizeAngle(this.angle + rayAngle);
+            pherFood.push(
+              pheromones.sampleDirection(
+                this.x,
+                this.y,
+                dir,
+                0,
+                CONFIG.PHER_SENSE_RANGE,
+              ),
+            );
+            pherDanger.push(
+              pheromones.sampleDirection(
+                this.x,
+                this.y,
+                dir,
+                1,
+                CONFIG.PHER_SENSE_RANGE,
+              ),
+            );
+          }
 
           // Energy
           const energyNorm = this.energy / CONFIG.ENERGY_START;
@@ -745,8 +771,8 @@
 
           return [
             ...vision,
-            pherFood,
-            pherDanger,
+            ...pherFood,
+            ...pherDanger,
             energyNorm,
             noise,
             memorySummary,
