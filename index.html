@@ -299,8 +299,8 @@
 
         // Colony economics
         FOOD_PER_NEST_DEPOSIT: 30, // Food ant brings back to nest
-        REPRO_COST: 80, // Colony food cost to spawn new ant
-        REPRO_THRESHOLD: 120, // Min colony food to reproduce
+        REPRO_COST: 50, // Colony food cost to spawn new ant (eased from spec's 80 to help small populations recover)
+        REPRO_THRESHOLD: 60, // Min colony food to reproduce (eased from spec's 120 to help small populations recover)
         REPRO_COOLDOWN: 30, // Frames between reproduction attempts
         MAX_POPULATION: 120,
         START_POPULATION: 40,
@@ -318,8 +318,8 @@
         MUTATION_STRENGTH: 0.2,
 
         // Food
-        FOOD_SPAWN_RATE: 0.03, // Chance per frame to spawn new food
-        FOOD_MAX: 50,
+        FOOD_SPAWN_RATE: 0.05, // Chance per frame to spawn new food (eased up from spec's 0.03 to shorten bootstrap time)
+        FOOD_MAX: 65, // eased up from spec's 50
 
         // Predator
         PREDATOR_SIZE: 8,
@@ -981,7 +981,11 @@
         initPopulation() {
           this.ants = [];
           for (let i = 0; i < CONFIG.START_POPULATION; i++) {
-            this.ants.push(new Ant());
+            const ant = new Ant();
+            // Stagger starting ages so the founding generation doesn't all
+            // hit MAX_AGE and die in one synchronized wave later on
+            ant.age = Math.floor(rand01() * CONFIG.MAX_AGE * 0.5);
+            this.ants.push(ant);
           }
           this.totalBorn = CONFIG.START_POPULATION;
         }
@@ -1079,15 +1083,34 @@
           // Remove dead ants (keep some for stats, but cap it)
           this.ants = this.ants.filter((a) => a.alive || a.age < 100);
 
-          // Emergency: if population crashes, spawn a few ants to prevent
-          // total extinction (colony food is capped at 0, never goes negative)
-          if (aliveCount < 3) {
-            for (let i = 0; i < 5; i++) {
-              this.colonyFood = Math.max(
-                0,
-                this.colonyFood - CONFIG.REPRO_COST,
-              );
-              this.ants.push(new Ant());
+          // Emergency: if population is critically low, spawn ants to prevent
+          // total extinction and maintain enough of a population floor for
+          // real genetic diversity (too small a gene pool causes stagnation,
+          // since selection is basically repeated inbreeding from one lineage).
+          // This is a safety net, not the normal reproduction economy, so it's
+          // free. Mix mutated survivors with fresh random newcomers so a crash
+          // doesn't lock the colony into a single narrow lineage.
+          if (aliveCount < 5) {
+            const survivors = this.ants.filter((a) => a.alive);
+
+            for (let i = 0; i < 8; i++) {
+              let child;
+              if (survivors.length > 0 && rand01() < 0.7) {
+                let parent = survivors[Math.floor(rand01() * survivors.length)];
+                if (survivors.length > 1) {
+                  const challenger =
+                    survivors[Math.floor(rand01() * survivors.length)];
+                  if (challenger.fitness > parent.fitness) parent = challenger;
+                }
+                child = new Ant(
+                  parent.nn.mutate(),
+                  this.nest.x + (rand01() - 0.5) * 20,
+                  this.nest.y + (rand01() - 0.5) * 20,
+                );
+              } else {
+                child = new Ant(); // fresh genetic material
+              }
+              this.ants.push(child);
               this.totalBorn++;
             }
           }
@@ -1309,7 +1332,7 @@
       }
 
       function speedUp() {
-        const speeds = [1, 5, 10, 20];
+        const speeds = [1, 5, 10, 20, 50, 100];
         const idx = speeds.indexOf(sim.speedMultiplier);
         sim.speedMultiplier = speeds[(idx + 1) % speeds.length];
         document.getElementById("speedLabel").textContent = sim.speedMultiplier;
